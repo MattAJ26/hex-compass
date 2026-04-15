@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hexagonal Political Compass</title>
+  <meta name="description" content="A 21-question hexagonal political compass quiz.">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main id="app">
+    <section id="s-intro" class="screen active">
+      <h1>Hexagonal Political Compass</h1>
+      <p class="sub">
+        Three axes of power centralization, each with two named poles. Your answers place you
+        inside a hexagonal grid - the closer to a vertex, the more extreme your position in that
+        dimension.
+      </p>
+
+      <div class="axis-grid">
+        <article class="axis-card">
+          <div class="axis-title">Political</div>
+          <div class="axis-pole pole-liberty">Liberty</div>
+          <div class="axis-divider">↕</div>
+          <div class="axis-pole pole-authority">Authority</div>
+        </article>
+        <article class="axis-card">
+          <div class="axis-title">Economic</div>
+          <div class="axis-pole pole-meritocracy">Meritocracy</div>
+          <div class="axis-divider">↕</div>
+          <div class="axis-pole pole-equality">Equality</div>
+        </article>
+        <article class="axis-card">
+          <div class="axis-title">Social</div>
+          <div class="axis-pole pole-hierarchy">Hierarchy</div>
+          <div class="axis-divider">↕</div>
+          <div class="axis-pole pole-anarchy">Anarchy</div>
+        </article>
+      </div>
+
+      <p class="sub intro-note">
+        21 questions. Results include a detailed profile of your political archetype, your dominant
+        values, and how your three axes interact.
+      </p>
+
+      <button id="btn-start" class="primary large">Begin quiz</button>
+    </section>
+
+    <section id="s-quiz" class="screen">
+      <div id="q-prog" class="progress"></div>
+      <div id="q-wrap"></div>
+      <div class="nav">
+        <button id="btn-back">Back</button>
+        <button id="btn-next" class="primary">Next</button>
+        <span id="q-pct" class="muted"></span>
+      </div>
+    </section>
+
+    <section id="s-result" class="screen">
+      <div id="archetype-display"></div>
+      <div class="result-scores">
+        <div class="sc">
+          <div class="sc-name pole-liberty">Political</div>
+          <div id="sv-pol" class="sc-val"></div>
+          <div id="sp-pol" class="sc-poles"></div>
+        </div>
+        <div class="sc">
+          <div class="sc-name pole-meritocracy">Economic</div>
+          <div id="sv-eco" class="sc-val"></div>
+          <div id="sp-eco" class="sc-poles"></div>
+        </div>
+        <div class="sc">
+          <div class="sc-name pole-hierarchy">Social</div>
+          <div id="sv-soc" class="sc-val"></div>
+          <div id="sp-soc" class="sc-poles"></div>
+        </div>
+      </div>
+
+      <canvas id="star" width="560" height="540"></canvas>
+      <button id="btn-restart" class="restart-btn">Retake quiz</button>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
