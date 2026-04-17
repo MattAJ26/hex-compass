@@ -87,11 +87,11 @@ p.sub{font-size:13px;color:var(--color-text-secondary);line-height:1.6;margin-bo
     <div class="sc"><div class="sc-name" style="color:#ccaa00">Economic</div><div class="sc-val" id="sv-eco"></div><div class="sc-poles" id="sp-eco"></div></div>
     <div class="sc"><div class="sc-name" style="color:#b388ff">Social</div><div class="sc-val" id="sv-soc"></div><div class="sc-poles" id="sp-soc"></div></div>
   </div>
-  <canvas id="star" width="560" height="540" style="display:block;margin:0 auto;max-width:100%"></canvas>
+  <canvas id="star" width="660" height="640" style="display:block;margin:0 auto;width:100%;max-width:720px;height:auto"></canvas>
   <div class="explorer-wrap" id="explorer-wrap" style="display:none">
     <label for="explorer-select">Explore archetype regions on the hex map</label>
     <select id="explorer-select" onchange="onExploreArch(this.value)"></select>
-    <p class="explorer-hint" id="explorer-hint">Each archetype occupies a box in score space (political, economic, social). The shaded area is that box projected onto the hex.</p>
+    <p class="explorer-hint" id="explorer-hint">The three positive poles sit 120&deg; apart, so balanced scores land near the centre and the three axes fill the hex evenly. Each archetype's shaded region is its score box, projected and clamped to the hex the same way as your dot.</p>
   </div>
   <button class="restart-btn" onclick="restart()">Retake quiz</button>
 </div>
@@ -442,13 +442,17 @@ function onExploreArch(val){
   if(lastDraw)drawStar(lastDraw.sc,lastDraw.arch);
 }
 
+const HEX_EDGE_EPS=1e-6;
+
+function crossZ(ax,ay,bx,by){return ax*by-ay*bx;}
+
 function insideConvexHex(px,py,verts){
   let sign=null;
   const n=verts.length;
   for(let i=0;i<n;i++){
     const j=(i+1)%n;
-    const cr=(verts[j].x-verts[i].x)*(py-verts[i].y)-(verts[j].y-verts[i].y)*(px-verts[i].x);
-    if(Math.abs(cr)<1e-10)continue;
+    const cr=crossZ(verts[j].x-verts[i].x,verts[j].y-verts[i].y,px-verts[i].x,py-verts[i].y);
+    if(Math.abs(cr)<HEX_EDGE_EPS)continue;
     const pos=cr>0;
     if(sign===null)sign=pos;
     else if(pos!==sign)return false;
@@ -459,7 +463,7 @@ function insideConvexHex(px,py,verts){
 function clampPointToConvexHex(px,py,cx,cy,verts){
   if(insideConvexHex(px,py,verts))return{x:px,y:py};
   let lo=0,hi=1;
-  for(let iter=0;iter<26;iter++){
+  for(let iter=0;iter<28;iter++){
     const mid=(lo+hi)/2;
     const mx=cx+mid*(px-cx),my=cy+mid*(py-cy);
     if(insideConvexHex(mx,my,verts))lo=mid;else hi=mid;
@@ -468,10 +472,82 @@ function clampPointToConvexHex(px,py,cx,cy,verts){
   return{x:cx+t*(px-cx),y:cy+t*(py-cy)};
 }
 
-function scoresToMapPoint(pol,eco,soc,cx,cy,verts){
+function hexVerts(cx,cy,R,vAngles){
+  return vAngles.map(a=>({x:cx+R*Math.cos(a*Math.PI/180),y:cy+R*Math.sin(a*Math.PI/180)}));
+}
+
+function clipPolygonToConvexHex(poly,clipVerts){
+  if(!poly||poly.length<2)return[];
+  const inside=(p,a,b)=>crossZ(b.x-a.x,b.y-a.y,p.x-a.x,p.y-a.y)>=-HEX_EDGE_EPS;
+  function intersect(p1,p2,a,b){
+    const dx=p2.x-p1.x,dy=p2.y-p1.y;
+    const ex=b.x-a.x,ey=b.y-a.y;
+    const den=crossZ(dx,dy,ex,ey);
+    if(Math.abs(den)<1e-12)return{x:p2.x,y:p2.y};
+    const t=crossZ(a.x-p1.x,a.y-p1.y,ex,ey)/den;
+    return{x:p1.x+t*dx,y:p1.y+t*dy};
+  }
+  let out=poly.slice();
+  const n=clipVerts.length;
+  for(let i=0;i<n;i++){
+    const a=clipVerts[i],b=clipVerts[(i+1)%n];
+    const inp=out;
+    out=[];
+    if(!inp.length)break;
+    let prev=inp[inp.length-1];
+    let prevIn=inside(prev,a,b);
+    for(let j=0;j<inp.length;j++){
+      const cur=inp[j];
+      const curIn=inside(cur,a,b);
+      if(curIn){
+        if(!prevIn)out.push(intersect(prev,cur,a,b));
+        out.push(cur);
+      }else if(prevIn)out.push(intersect(prev,cur,a,b));
+      prev=cur;prevIn=curIn;
+    }
+  }
+  if(out.length>1){
+    const a=out[0],b=out[out.length-1];
+    if(Math.hypot(a.x-b.x,a.y-b.y)<1e-4)out.pop();
+  }
+  return out;
+}
+
+function clipPathFromVerts(ctx,verts){
+  ctx.beginPath();
+  verts.forEach((v,i)=>i===0?ctx.moveTo(v.x,v.y):ctx.lineTo(v.x,v.y));
+  ctx.closePath();
+  ctx.clip();
+}
+
+function placeFloatingPill(dot,cy,W,H,lw,lh,margin,rDot,gap){
+  const cands=[
+    {l:dot.x-lw/2,t:dot.y-rDot-gap-lh},
+    {l:dot.x-lw/2,t:dot.y+rDot+gap},
+    {l:dot.x+rDot+gap,t:dot.y-lh/2},
+    {l:dot.x-rDot-gap-lw,t:dot.y-lh/2},
+  ];
+  const inB=(l,t)=>l>=margin&&t>=margin&&l+lw<=W-margin&&t+lh<=H-margin;
+  let order=[0,1,2,3];
+  if(dot.y<cy-25)order=[1,0,2,3];
+  else if(dot.y>cy+25)order=[0,1,2,3];
+  for(const i of order){
+    const c=cands[i];
+    if(inB(c.l,c.t))return{l:c.l,t:c.t};
+  }
   return{
-    x:cx+(pol/10)*(verts[0].x-cx)+(eco/10)*(verts[1].x-cx)+(soc/10)*(verts[2].x-cx),
-    y:cy+(pol/10)*(verts[0].y-cy)+(eco/10)*(verts[1].y-cy)+(soc/10)*(verts[2].y-cy)
+    l:Math.max(margin,Math.min(dot.x-lw/2,W-margin-lw)),
+    t:Math.max(margin,Math.min(dot.y-lh/2,H-margin-lh)),
+  };
+}
+
+const AXIS_POS_IDX={pol:1,eco:2,soc:3};
+
+function scoresToMapPoint(pol,eco,soc,cx,cy,verts){
+  const vp=verts[AXIS_POS_IDX.pol],ve=verts[AXIS_POS_IDX.eco],vs=verts[AXIS_POS_IDX.soc];
+  return{
+    x:cx+(pol/10)*(vp.x-cx)+(eco/10)*(ve.x-cx)+(soc/10)*(vs.x-cx),
+    y:cy+(pol/10)*(vp.y-cy)+(eco/10)*(ve.y-cy)+(soc/10)*(vs.y-cy)
   };
 }
 
@@ -494,36 +570,58 @@ function convexHull2D(points){
   return lower.concat(upper);
 }
 
-function archetypeRegionHull(a,cx,cy,verts){
+function archetypeRegionPolygon(a,cx,cy,verts,gridSteps){
+  const n=Math.max(3,gridSteps|0||5);
   const pts=[];
-  for(const p of[a.pol[0],a.pol[1]])
-    for(const e of[a.eco[0],a.eco[1]])
-      for(const s of[a.soc[0],a.soc[1]])
-        pts.push(scoresToMapPoint(p,e,s,cx,cy,verts));
-  return convexHull2D(pts);
+  const polR=a.pol,ecoR=a.eco,socR=a.soc;
+  const add=(pol,eco,soc)=>{
+    const raw=scoresToMapPoint(pol,eco,soc,cx,cy,verts);
+    pts.push(clampPointToConvexHex(raw.x,raw.y,cx,cy,verts));
+  };
+  for(let i=0;i<=n;i++){
+    const pol=polR[0]+(polR[1]-polR[0])*(i/n);
+    for(let j=0;j<=n;j++){
+      const eco=ecoR[0]+(ecoR[1]-ecoR[0])*(j/n);
+      for(let k=0;k<=n;k++){
+        const soc=socR[0]+(socR[1]-socR[0])*(k/n);
+        add(pol,eco,soc);
+      }
+    }
+  }
+  const hull=convexHull2D(pts);
+  return hull.length>=3?hull:[];
 }
 
 function drawStar(sc,arch){
   const canvas=document.getElementById('star');
   const ctx=canvas.getContext('2d');
-  const W=560,H=540;
+  const W=660,H=640;
   canvas.width=W;canvas.height=H;
   const dark=matchMedia('(prefers-color-scheme: dark)').matches;
   ctx.clearRect(0,0,W,H);
-  const cx=W/2,cy=H/2+10,R=160;
-  const Rinner=R*0.34;
+  const cx=W/2,cy=H/2+10,R=220;
+  const Rinner=R*0.30;
   const vAngles=[-150,-90,-30,30,90,150];
   const poles=[
+    {label:'Anarchy',sub:'Social freedom',color:'#888888',axis:'soc',sign:-1},
     {label:'Liberty',sub:'Political freedom',color:'#8888ee',axis:'pol',sign:1},
     {label:'Meritocracy',sub:'Economic freedom',color:'#ddbb00',axis:'eco',sign:1},
     {label:'Hierarchy',sub:'Social order',color:'#9955dd',axis:'soc',sign:1},
     {label:'Authority',sub:'Political control',color:'#cc4444',axis:'pol',sign:-1},
     {label:'Equality',sub:'Economic control',color:'#dd4444',axis:'eco',sign:-1},
-    {label:'Anarchy',sub:'Social freedom',color:'#888888',axis:'soc',sign:-1},
   ];
-  const sectionColors=['#aaaaff','#4466ee','#8833cc','#222222','#cc3333','#888888'];
-  const verts=vAngles.map(a=>({x:cx+R*Math.cos(a*Math.PI/180),y:cy+R*Math.sin(a*Math.PI/180)}));
-  const vertsInner=vAngles.map(a=>({x:cx+Rinner*Math.cos(a*Math.PI/180),y:cy+Rinner*Math.sin(a*Math.PI/180)}));
+  const trapFills=[
+    dark?'rgba(136,136,136,0.82)':'rgba(136,136,136,0.72)',
+    dark?'rgba(255,213,79,0.82)':'rgba(255,213,79,0.68)',
+    dark?'rgba(33,150,243,0.82)':'rgba(33,150,243,0.65)',
+    dark?'rgba(18,18,18,0.92)':'rgba(26,26,26,0.88)',
+    dark?'rgba(229,57,53,0.82)':'rgba(229,57,53,0.68)',
+    dark?'rgba(67,160,71,0.82)':'rgba(67,160,71,0.68)',
+  ];
+  const verts=hexVerts(cx,cy,R,vAngles);
+  const vertsInner=hexVerts(cx,cy,Rinner,vAngles);
+  const dotOuterR=14+2.5+2;
+  const vertsSafe=hexVerts(cx,cy,R-dotOuterR,vAngles);
 
   for(let i=0;i<6;i++){
     const v1o=verts[i],v2o=verts[(i+1)%6];
@@ -531,7 +629,7 @@ function drawStar(sc,arch){
     ctx.beginPath();
     ctx.moveTo(v1i.x,v1i.y);ctx.lineTo(v1o.x,v1o.y);ctx.lineTo(v2o.x,v2o.y);
     ctx.lineTo(v2i.x,v2i.y);ctx.closePath();
-    ctx.fillStyle=sectionColors[i]+(dark?'bb':'cc');
+    ctx.fillStyle=trapFills[i];
     ctx.fill();
     ctx.strokeStyle=dark?'rgba(255,255,255,0.12)':'rgba(255,255,255,0.5)';
     ctx.lineWidth=1;ctx.stroke();
@@ -539,7 +637,7 @@ function drawStar(sc,arch){
   ctx.beginPath();
   vertsInner.forEach((v,i)=>i===0?ctx.moveTo(v.x,v.y):ctx.lineTo(v.x,v.y));
   ctx.closePath();
-  ctx.fillStyle=dark?'rgba(40,40,55,0.35)':'rgba(255,255,255,0.55)';
+  ctx.fillStyle=dark?'rgba(129,212,250,0.42)':'rgba(179,229,252,0.92)';
   ctx.fill();
   ctx.strokeStyle=dark?'rgba(255,255,255,0.35)':'rgba(0,0,0,0.28)';
   ctx.lineWidth=1.5;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
@@ -558,32 +656,39 @@ function drawStar(sc,arch){
 
   if(exploreArchIndex!==null&&!isNaN(exploreArchIndex)&&ARCHETYPES[exploreArchIndex]){
     const ex=ARCHETYPES[exploreArchIndex];
-    const hull=archetypeRegionHull(ex,cx,cy,verts);
-    if(hull.length>=3){
+    const hull=archetypeRegionPolygon(ex,cx,cy,verts,5);
+    const clipped=clipPolygonToConvexHex(hull,verts);
+    if(clipped.length>=3){
       ctx.save();
+      clipPathFromVerts(ctx,verts);
       ctx.beginPath();
-      verts.forEach((v,i)=>i===0?ctx.moveTo(v.x,v.y):ctx.lineTo(v.x,v.y));
-      ctx.closePath();
-      ctx.clip();
-      ctx.beginPath();
-      hull.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+      clipped.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
       ctx.closePath();
       ctx.fillStyle=ex.color+(dark?'44':'55');
       ctx.fill();
-      ctx.strokeStyle=ex.color+(dark?'aa':'99');
-      ctx.lineWidth=2;ctx.stroke();
+      ctx.strokeStyle=ex.color+(dark?'88':'77');
+      ctx.lineWidth=1;ctx.stroke();
       ctx.restore();
+
+      ctx.save();
       ctx.font=`500 11px var(--font-sans,sans-serif)`;
-      ctx.fillStyle=dark?'rgba(240,240,240,0.95)':'rgba(15,15,15,0.92)';
-      ctx.textAlign='center';ctx.textBaseline='bottom';
-      const cxh=hull.reduce((s,p)=>s+p.x,0)/hull.length;
-      const cyh=hull.reduce((s,p)=>s+p.y,0)/hull.length;
+      const cxh=clipped.reduce((s,p)=>s+p.x,0)/clipped.length;
+      const cyh=clipped.reduce((s,p)=>s+p.y,0)/clipped.length;
       const lbl=ex.name;
       const tw=ctx.measureText(lbl).width;
-      ctx.fillStyle=dark?'rgba(25,25,30,0.82)':'rgba(255,255,255,0.88)';
-      ctx.beginPath();ctx.roundRect(cxh-tw/2-5,cyh-22,tw+10,15,4);ctx.fill();
+      const pad=5,bh=15,lw=tw+pad*2;
+      const pos=placeFloatingPill({x:cxh,y:cyh},cy,W,H,lw,bh,6,0,6);
+      ctx.shadowColor=dark?'rgba(0,0,0,0.55)':'rgba(0,0,0,0.2)';
+      ctx.shadowBlur=8;ctx.shadowOffsetY=1;
+      ctx.fillStyle=dark?'rgba(25,25,30,0.92)':'rgba(255,255,255,0.95)';
+      ctx.beginPath();
+      ctx.roundRect(pos.l,pos.t,lw,bh,4);
+      ctx.fill();
+      ctx.shadowBlur=0;ctx.shadowOffsetY=0;
       ctx.fillStyle=ex.color;
-      ctx.fillText(lbl,cxh,cyh-10);
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(lbl,pos.l+lw/2,pos.t+bh/2);
+      ctx.restore();
     }
   }
 
@@ -599,26 +704,8 @@ function drawStar(sc,arch){
     ctx.fillText(p.sub,lx,ly+14);
   });
 
-  const raw=scoresToMapPoint(sc.pol,sc.eco,sc.soc,cx,cy,verts);
-  const dot=clampPointToConvexHex(raw.x,raw.y,cx,cy,verts);
-
-  ctx.beginPath();ctx.arc(dot.x,dot.y,14,0,Math.PI*2);
-  ctx.fillStyle=arch.color+'55';ctx.fill();
-  ctx.beginPath();ctx.arc(dot.x,dot.y,9,0,Math.PI*2);
-  ctx.fillStyle=dark?'#1a1a22':'#ffffff';ctx.fill();
-  ctx.strokeStyle=arch.color;ctx.lineWidth=2.5;ctx.stroke();
-
-  ctx.font=`500 11px var(--font-sans,sans-serif)`;
-  ctx.textAlign='center';ctx.textBaseline='bottom';
-  const labelText='You: '+arch.name;
-  const tw=ctx.measureText(labelText).width;
-  ctx.fillStyle=dark?'rgba(30,30,36,0.82)':'rgba(255,255,255,0.88)';
-  ctx.beginPath();
-  ctx.roundRect(dot.x-tw/2-6,dot.y-28,tw+12,16,4);
-  ctx.fill();
-  ctx.fillStyle=dark?'rgba(240,240,240,0.95)':'rgba(10,10,10,0.9)';
-  ctx.fillText(labelText,dot.x,dot.y-14);
-
+  ctx.save();
+  clipPathFromVerts(ctx,verts);
   ctx.font=`400 10px var(--font-sans,sans-serif)`;
   ctx.fillStyle=dark?'rgba(200,200,200,0.55)':'rgba(100,100,100,0.5)';
   ctx.textAlign='center';ctx.textBaseline='middle';
@@ -626,6 +713,37 @@ function drawStar(sc,arch){
   ctx.font=`400 9px var(--font-sans,sans-serif)`;
   ctx.fillStyle=dark?'rgba(180,180,190,0.45)':'rgba(90,90,100,0.45)';
   ctx.fillText('More neutral scores',cx,cy+12);
+  ctx.restore();
+
+  const raw=scoresToMapPoint(sc.pol,sc.eco,sc.soc,cx,cy,verts);
+  const dot=clampPointToConvexHex(raw.x,raw.y,cx,cy,vertsSafe);
+
+  ctx.save();
+  clipPathFromVerts(ctx,verts);
+  ctx.beginPath();ctx.arc(dot.x,dot.y,14,0,Math.PI*2);
+  ctx.fillStyle=arch.color+'55';ctx.fill();
+  ctx.beginPath();ctx.arc(dot.x,dot.y,9,0,Math.PI*2);
+  ctx.fillStyle=dark?'#1a1a22':'#ffffff';ctx.fill();
+  ctx.strokeStyle=arch.color;ctx.lineWidth=2.5;ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  ctx.font=`500 11px var(--font-sans,sans-serif)`;
+  const labelText='You: '+arch.name;
+  const tw=ctx.measureText(labelText).width;
+  const lh=18,lw=tw+12;
+  const pos=placeFloatingPill(dot,cy,W,H,lw,lh,8,14,6);
+  ctx.shadowColor=dark?'rgba(0,0,0,0.55)':'rgba(0,0,0,0.2)';
+  ctx.shadowBlur=8;ctx.shadowOffsetY=1;
+  ctx.fillStyle=dark?'rgba(30,30,36,0.92)':'rgba(255,255,255,0.96)';
+  ctx.beginPath();
+  ctx.roundRect(pos.l,pos.t,lw,lh,4);
+  ctx.fill();
+  ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  ctx.fillStyle=dark?'rgba(240,240,240,0.98)':'rgba(10,10,10,0.92)';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(labelText,pos.l+lw/2,pos.t+lh/2);
+  ctx.restore();
 }
 
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
