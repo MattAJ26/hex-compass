@@ -26,11 +26,11 @@ This repository includes `.github/workflows/pages.yml`, which deploys the site t
 1. Push this project to a GitHub repository.
 2. In GitHub, open **Settings -> Pages**.
 3. Under **Build and deployment**, set **Source** to **GitHub Actions**.
-4. Ensure your default branch is `main` (or update the workflow branch trigger if needed).
+4. Ensure your default branch is `master` (or update the workflow branch trigger if needed).
 
 ### Deploy flow
 
-- Every push to `main` triggers the Pages workflow.
+- Every push to `master` triggers the Pages workflow.
 - The workflow publishes this folder as a static site (no build step required).
 - After the workflow finishes, your site is available at:
   - `https://<your-username>.github.io/<your-repo>/`
