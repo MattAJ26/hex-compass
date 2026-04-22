@@ -66,6 +66,38 @@ h1 {
   margin-bottom: 1rem;
 }
 
+.intro-theory {
+  background: var(--color-background-secondary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  padding: 1rem 1.15rem;
+  margin-bottom: 1rem;
+}
+
+.intro-theory h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 0.55rem;
+  line-height: 1.35;
+}
+
+.intro-theory p {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  line-height: 1.65;
+  margin-bottom: 0.65rem;
+}
+
+.intro-theory p:last-child {
+  margin-bottom: 0;
+}
+
+.intro-theory strong {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
 .axis-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -308,7 +340,7 @@ button.large {
 #star {
   display: block;
   margin: 0 auto;
-  max-width: min(100%, 720px);
+  max-width: min(100%, 820px);
   height: auto;
 }
 

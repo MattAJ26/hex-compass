@@ -25,7 +25,7 @@ const Qs = [
 const ARCHETYPES = [
   {
     name: "Pure Libertarian",
-    pol: [6, 10], eco: [6, 10], soc: [-4, 4],
+    pol: [7, 10], eco: [4, 8], soc: [-7, -1],
     color: "#5599ff",
     tagline: "\"The individual is sovereign. The state is the problem.\"",
     body: "You believe that political and economic freedom are inseparable and supreme. The state should be minimized in all its forms - neither your wallet nor your life choices are its business. You likely see taxation as coercion, regulation as control, and most government programs as well-intentioned failures at best, power grabs at worst. Your north star is the consenting individual, not the collective.",
@@ -34,7 +34,7 @@ const ARCHETYPES = [
   },
   {
     name: "Anarcho-Capitalist",
-    pol: [6, 10], eco: [7, 10], soc: [-2, 6],
+    pol: [8, 10], eco: [8, 10], soc: [-1, 5],
     color: "#ffcc00",
     tagline: "\"Abolish the state. Keep the market.\"",
     body: "You push libertarianism to its logical endpoint: no state at all, but fully free markets. You believe private property, voluntary contracts, and competitive markets can replace every function government currently performs - from courts to roads to security. Coercion is the only wrong; everything consensual is permissible. You're skeptical of democracy itself as a system that legitimizes majority coercion.",
@@ -43,7 +43,7 @@ const ARCHETYPES = [
   },
   {
     name: "Classical Liberal",
-    pol: [4, 10], eco: [3, 9], soc: [-3, 4],
+    pol: [2, 5], eco: [2, 6], soc: [-4, 3],
     color: "#88aaff",
     tagline: "\"Rule of law, not of men.\"",
     body: "You hold the founding philosophy of constitutional democracy: individuals have natural rights, governments exist to protect them, and no ruler is above the law. You believe in free markets tempered by the rule of law, civil liberties as near-absolutes, and democratic accountability as a check on power. You're suspicious of both unchecked state power and mob democracy - the constitution matters.",
@@ -52,7 +52,7 @@ const ARCHETYPES = [
   },
   {
     name: "Libertarian Conservative",
-    pol: [3, 8], eco: [5, 10], soc: [2, 8],
+    pol: [6, 8], eco: [5, 8], soc: [3, 9],
     color: "#aaddaa",
     tagline: "\"Free markets and traditional values - they're not contradictory.\"",
     body: "You combine economic liberty with social traditionalism. You want government out of your business and your paycheck, but you also believe that strong families, cultural continuity, and community norms are what make freedom sustainable. You're not authoritarian - you don't want the state enforcing morality - but you think civil society's traditional structures are worth defending.",
@@ -61,7 +61,7 @@ const ARCHETYPES = [
   },
   {
     name: "Meritocrat",
-    pol: [-3, 5], eco: [6, 10], soc: [2, 8],
+    pol: [1, 5], eco: [8, 10], soc: [2, 8],
     color: "#ffdd55",
     tagline: "\"Reward effort and talent. Let outcomes differ.\"",
     body: "You believe the fairest society is one where your position reflects your ability and effort, not your birth or connections. Markets are the best meritocracy we have - they route resources to whoever serves others most effectively. You accept that outcomes will be unequal, even dramatically so, because the alternative - enforced equality - punishes excellence. Social hierarchies, when based on genuine competence, are legitimate and functional.",
@@ -124,7 +124,7 @@ const ARCHETYPES = [
   },
   {
     name: "Social Democrat",
-    pol: [2, 8], eco: [-8, -2], soc: [-4, 4],
+    pol: [2, 8], eco: [-8, -4], soc: [-4, 4],
     color: "#7777dd",
     tagline: "\"Economic equality through democratic means.\"",
     body: "You believe capitalism generates prosperity but distributes it unjustly, and that democratic politics is the legitimate tool to correct this. Strong unions, progressive taxation, public services, and a robust welfare state - all achieved through elections, not revolution. You reject both unregulated capitalism and authoritarian socialism. Political freedom and economic fairness are both non-negotiable.",
@@ -133,7 +133,7 @@ const ARCHETYPES = [
   },
   {
     name: "Progressive",
-    pol: [3, 9], eco: [-5, 1], soc: [-8, -2],
+    pol: [2, 7], eco: [-10, -5], soc: [-9, -2],
     color: "#9966cc",
     tagline: "\"Dismantle every hierarchy. Build from below.\"",
     body: "You want political freedom, economic redistribution, and the active dismantling of social hierarchies - racial, gender, class-based, and cultural. You don't just want the state to leave people alone; you want it to actively correct historical inequalities. Social norms that have entrenched dominance need to be challenged and replaced with genuine equality of status and recognition.",
@@ -142,7 +142,7 @@ const ARCHETYPES = [
   },
   {
     name: "Anarcho-Communist",
-    pol: [6, 10], eco: [-10, -5], soc: [-10, -4],
+    pol: [8, 10], eco: [-10, -6], soc: [-10, -5],
     color: "#cc4488",
     tagline: "\"No state. No class. No masters.\"",
     body: "You reject all three forms of centralized power simultaneously. No government, no capitalist ownership, no social hierarchy. You believe that voluntary, horizontal collective organization can replace all of these - that people, freed from coercion, will cooperate naturally and justly. Property is theft; the state is violence; hierarchy is domination. All three must go together.",
@@ -160,7 +160,7 @@ const ARCHETYPES = [
   },
   {
     name: "Communitarian",
-    pol: [-1, 5], eco: [-3, 4], soc: [4, 10],
+    pol: [0, 5], eco: [-3, 4], soc: [4, 10],
     color: "#ddaa44",
     tagline: "\"We before me. The community is the unit that matters.\"",
     body: "You believe that the hyper-individualism of liberal modernity has produced isolated, atomized people who've lost the social fabric that makes life meaningful. Community, tradition, shared identity, and mutual obligation are not constraints on freedom - they are its preconditions. You're not necessarily authoritarian politically or socialist economically, but you resist the reduction of all human relationships to markets or individual rights.",
@@ -169,7 +169,7 @@ const ARCHETYPES = [
   },
   {
     name: "Centrist",
-    pol: [-3, 3], eco: [-3, 3], soc: [-3, 3],
+    pol: [-2, 2], eco: [-2, 2], soc: [-2, 2],
     color: "#888888",
     tagline: "\"The truth is usually somewhere in the middle.\"",
     body: "You don't land strongly on any axis - which means either that you're genuinely moderate across all three dimensions, or that you hold views that pull in different directions and cancel out. Centrism can be a principled commitment to pragmatism and compromise, or it can reflect an absence of strong conviction. Either way, you're unlikely to be mobilized by extreme ideologies, and you probably believe that most political problems have workable solutions that don't require ideological purity.",
@@ -178,7 +178,7 @@ const ARCHETYPES = [
   },
   {
     name: "Neoliberal",
-    pol: [1, 6], eco: [5, 10], soc: [-2, 5],
+    pol: [0, 3], eco: [3, 6], soc: [-2, 4],
     color: "#66aacc",
     tagline: "\"Open markets, open societies, strong institutions.\"",
     body: "You believe that free trade, market competition, and democratic governance are mutually reinforcing goods that have lifted billions out of poverty and produced the most peaceful era in human history. You're not ideologically pure - you accept regulation where markets genuinely fail - but your default is to trust markets and distrust political intervention in economics. You're socially moderate and internationalist.",
@@ -187,7 +187,7 @@ const ARCHETYPES = [
   },
   {
     name: "Populist Right",
-    pol: [-2, 5], eco: [-1, 6], soc: [5, 10],
+    pol: [-4, 3], eco: [-2, 5], soc: [5, 10],
     color: "#cc6633",
     tagline: "\"The real people against the corrupt elite - and against outsiders.\"",
     body: "You believe the nation's authentic people have been betrayed by cosmopolitan elites who prioritize globalism, diversity, and their own power over the cultural and economic interests of ordinary people. Strong social hierarchy - national identity, traditional family structures, defined roles - gives society the cohesion the elites have dissolved. You may be skeptical of both big government and big corporations, but you're certain about who the enemy is.",
@@ -196,7 +196,7 @@ const ARCHETYPES = [
   },
   {
     name: "Populist Left",
-    pol: [1, 6], eco: [-7, -1], soc: [-6, 0],
+    pol: [1, 6], eco: [-8, -4], soc: [-6, 0],
     color: "#dd6688",
     tagline: "\"The real people against the billionaire class.\"",
     body: "You believe economic and social power has been illegitimately concentrated in the hands of the wealthy few, and that ordinary people - the 99% - need to take it back through democratic political action. You're anti-hierarchy socially, skeptical of establishment institutions, and strongly redistributionist economically. Unlike the right populist, your 'enemy' is economic, not cultural - you're more likely to blame Wall Street than immigrants.",
@@ -525,6 +525,18 @@ function placeFloatingPill(dot, cy, W, H, lw, lh, margin, rDot, gap) {
   };
 }
 
+/** Slightly expands mid-range magnitudes on the map so regions read more evenly (matching still uses raw scores). */
+const VISUAL_SCORE_GAMMA = 0.9;
+
+function scoreForVisualMap(s) {
+  if (s === 0) {
+    return 0;
+  }
+  const sign = Math.sign(s);
+  const t = Math.abs(s) / 10;
+  return sign * Math.pow(t, VISUAL_SCORE_GAMMA) * 10;
+}
+
 function scoresToMapPoint(pol, eco, soc, cx, cy, verts) {
   const vp = verts[AXIS_POS_IDX.pol];
   const ve = verts[AXIS_POS_IDX.eco];
@@ -568,7 +580,7 @@ function archetypeRegionPolygon(a, cx, cy, verts, gridSteps) {
   const ecoR = a.eco;
   const socR = a.soc;
   const add = (pol, eco, soc) => {
-    const raw = scoresToMapPoint(pol, eco, soc, cx, cy, verts);
+    const raw = scoresToMapPoint(scoreForVisualMap(pol), scoreForVisualMap(eco), scoreForVisualMap(soc), cx, cy, verts);
     pts.push(clampPointToConvexHex(raw.x, raw.y, cx, cy, verts));
   };
   for (let i = 0; i <= n; i += 1) {
@@ -632,8 +644,8 @@ function roundedRect(ctx, x, y, width, height, radius) {
 function drawStar(scores, arch) {
   const canvas = document.getElementById("star");
   const ctx = canvas.getContext("2d");
-  const W = 660;
-  const H = 640;
+  const W = 780;
+  const H = 760;
   canvas.width = W;
   canvas.height = H;
 
@@ -641,8 +653,8 @@ function drawStar(scores, arch) {
   ctx.clearRect(0, 0, W, H);
 
   const cx = W / 2;
-  const cy = H / 2 + 10;
-  const R = 220;
+  const cy = H / 2 + 14;
+  const R = 268;
   const Rinner = R * 0.3;
   const vAngles = [-150, -90, -30, 30, 90, 150];
   const poles = [
@@ -727,8 +739,11 @@ function drawStar(scores, arch) {
 
   if (exploreArchIndex !== null && !Number.isNaN(exploreArchIndex) && ARCHETYPES[exploreArchIndex]) {
     const ex = ARCHETYPES[exploreArchIndex];
-    const hull = archetypeRegionPolygon(ex, cx, cy, verts, 5);
-    const clipped = clipPolygonToConvexHex(hull, verts);
+    const hull = archetypeRegionPolygon(ex, cx, cy, verts, 6);
+    let clipped = clipPolygonToConvexHex(hull, verts);
+    if (ex.name === "Centrist") {
+      clipped = clipPolygonToConvexHex(clipped, vertsInner);
+    }
     if (clipped.length >= 3) {
       ctx.save();
       clipPathFromVerts(ctx, verts);
@@ -778,8 +793,8 @@ function drawStar(scores, arch) {
   const fontSub = "400 10px Inter, Segoe UI, sans-serif";
   poles.forEach((p, i) => {
     const a = (vAngles[i] * Math.PI) / 180;
-    const lx = cx + (R + 28) * Math.cos(a);
-    const ly = cy + (R + 28) * Math.sin(a);
+    const lx = cx + (R + 32) * Math.cos(a);
+    const ly = cy + (R + 32) * Math.sin(a);
     ctx.font = fontMain;
     ctx.fillStyle = dark ? "rgba(230,230,230,0.95)" : "rgba(20,20,20,0.9)";
     ctx.textAlign = "center";
@@ -797,13 +812,19 @@ function drawStar(scores, arch) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("Centre", cx, cy);
-  ctx.font = "400 9px Inter, Segoe UI, sans-serif";
-  ctx.fillStyle = dark ? "rgba(180,180,190,0.45)" : "rgba(90,90,100,0.45)";
-  ctx.fillText("More neutral scores", cx, cy + 12);
   ctx.restore();
 
-  const raw = scoresToMapPoint(scores.pol, scores.eco, scores.soc, cx, cy, verts);
-  const dot = clampPointToConvexHex(raw.x, raw.y, cx, cy, vertsSafe);
+  const raw = scoresToMapPoint(
+    scoreForVisualMap(scores.pol),
+    scoreForVisualMap(scores.eco),
+    scoreForVisualMap(scores.soc),
+    cx,
+    cy,
+    verts
+  );
+  const vertsInnerSafe = hexVerts(cx, cy, Rinner - dotOuterR, vAngles);
+  const clampVerts = arch.name === "Centrist" ? vertsInnerSafe : vertsSafe;
+  const dot = clampPointToConvexHex(raw.x, raw.y, cx, cy, clampVerts);
 
   ctx.save();
   clipPathFromVerts(ctx, verts);

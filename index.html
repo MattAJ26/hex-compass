@@ -4,17 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Hexagonal Political Compass</title>
-  <meta name="description" content="A 21-question hexagonal political compass quiz.">
-  <link rel="stylesheet" href="./styles.css?v=4">
+  <meta name="description" content="A 21-question quiz on political, economic, and social dimensions of power—mapped on a hexagonal compass instead of a single left-right line.">
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <main id="app">
     <section id="s-intro" class="screen active">
       <h1>Hexagonal Political Compass</h1>
       <p class="sub">
-        Three axes of power centralization, each with two named poles. Your answers place you
-        inside a hexagonal grid - the closer to a vertex, the more extreme your position in that
-        dimension.
+        Each axis measures how much you favour <strong>concentrating</strong> versus
+        <strong>diffusing</strong> power in a different domain. Your result is a single point inside
+        a hexagon: the three positive poles sit evenly around the shape, so the map does not collapse
+        everything into one line.
       </p>
 
       <div class="axis-grid">
@@ -36,6 +37,31 @@
           <div class="axis-divider">↕</div>
           <div class="axis-pole pole-anarchy">Anarchy</div>
         </article>
+      </div>
+
+      <div class="intro-theory" role="region" aria-labelledby="theory-heading">
+        <h2 id="theory-heading">How this differs from other spectrums</h2>
+        <p>
+          A simple <strong>left-right</strong> scale packs many kinds of disagreement into one
+          number—markets, tradition, civil liberties, nationalism, and more end up fused. People with
+          similar labels can want very different things.
+        </p>
+        <p>
+          The familiar <strong>two-axis “political compass”</strong> (often economic left-right plus
+          an authoritarian-libertarian axis) is a step forward: it separates who should control
+          resources from how much the state should regulate life. Still, one “authority” slider tends
+          to blur together <em>political</em> centralization (who governs and how), <em>economic</em>
+          centralization (markets and inequality versus redistribution), and <em>social</em>
+          centralization (fixed roles and moral order versus voluntary, flat cooperation). This quiz
+          treats those as three separable questions, each with its own pole pair.
+        </p>
+        <p>
+          The <strong>hexagon</strong> is a layout choice, not a fourth ideology: your three scores
+          are combined so that moving toward liberty, meritocracy, or hierarchy pulls you toward
+          different corners, while mixed answers land toward the centre. No model captures every
+          debate; this one is meant to make trade-offs between dimensions visible instead of hiding
+          them inside a single spectrum.
+        </p>
       </div>
 
       <p class="sub intro-note">
@@ -76,7 +102,7 @@
         </div>
       </div>
 
-      <canvas id="star" width="660" height="640"></canvas>
+      <canvas id="star" width="780" height="760"></canvas>
       <div class="explorer-wrap" id="explorer-wrap">
         <label for="explorer-select">Explore archetype regions on the hex map</label>
         <select id="explorer-select"></select>
@@ -88,6 +114,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=4"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
