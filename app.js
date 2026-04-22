@@ -211,6 +211,8 @@ const likertScores = [2, 1, 0, -1, -2];
 
 let answers = new Array(Qs.length).fill(null);
 let cur = 0;
+let lastDraw = null;
+let exploreArchIndex = null;
 
 function show(id) {
   document.querySelectorAll(".screen").forEach((screen) => screen.classList.remove("active"));
@@ -372,7 +374,244 @@ function showResult() {
   document.getElementById("sp-eco").textContent = ecoLbl;
   document.getElementById("sp-soc").textContent = socLbl;
 
+  lastDraw = { sc: scores, arch };
+  setupExplorerSelect(arch);
   drawStar(scores, arch);
+}
+
+const HEX_EDGE_EPS = 1e-6;
+const AXIS_POS_IDX = { pol: 1, eco: 2, soc: 3 };
+
+function crossZ(ax, ay, bx, by) {
+  return ax * by - ay * bx;
+}
+
+function insideConvexHex(px, py, verts) {
+  let sign = null;
+  const n = verts.length;
+  for (let i = 0; i < n; i += 1) {
+    const j = (i + 1) % n;
+    const cr = crossZ(verts[j].x - verts[i].x, verts[j].y - verts[i].y, px - verts[i].x, py - verts[i].y);
+    if (Math.abs(cr) < HEX_EDGE_EPS) {
+      continue;
+    }
+    const pos = cr > 0;
+    if (sign === null) {
+      sign = pos;
+    } else if (pos !== sign) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function clampPointToConvexHex(px, py, cx, cy, verts) {
+  if (insideConvexHex(px, py, verts)) {
+    return { x: px, y: py };
+  }
+  let lo = 0;
+  let hi = 1;
+  for (let iter = 0; iter < 28; iter += 1) {
+    const mid = (lo + hi) / 2;
+    const mx = cx + mid * (px - cx);
+    const my = cy + mid * (py - cy);
+    if (insideConvexHex(mx, my, verts)) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  const t = lo;
+  return { x: cx + t * (px - cx), y: cy + t * (py - cy) };
+}
+
+function hexVerts(cx, cy, R, vAngles) {
+  return vAngles.map((a) => ({
+    x: cx + R * Math.cos((a * Math.PI) / 180),
+    y: cy + R * Math.sin((a * Math.PI) / 180)
+  }));
+}
+
+function clipPolygonToConvexHex(poly, clipVerts) {
+  if (!poly || poly.length < 2) {
+    return [];
+  }
+  const inside = (p, a, b) => crossZ(b.x - a.x, b.y - a.y, p.x - a.x, p.y - a.y) >= -HEX_EDGE_EPS;
+  function intersect(p1, p2, a, b) {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const ex = b.x - a.x;
+    const ey = b.y - a.y;
+    const den = crossZ(dx, dy, ex, ey);
+    if (Math.abs(den) < 1e-12) {
+      return { x: p2.x, y: p2.y };
+    }
+    const t = crossZ(a.x - p1.x, a.y - p1.y, ex, ey) / den;
+    return { x: p1.x + t * dx, y: p1.y + t * dy };
+  }
+  let out = poly.slice();
+  const n = clipVerts.length;
+  for (let i = 0; i < n; i += 1) {
+    const a = clipVerts[i];
+    const b = clipVerts[(i + 1) % n];
+    const inp = out;
+    out = [];
+    if (!inp.length) {
+      break;
+    }
+    let prev = inp[inp.length - 1];
+    let prevIn = inside(prev, a, b);
+    for (let j = 0; j < inp.length; j += 1) {
+      const cur = inp[j];
+      const curIn = inside(cur, a, b);
+      if (curIn) {
+        if (!prevIn) {
+          out.push(intersect(prev, cur, a, b));
+        }
+        out.push(cur);
+      } else if (prevIn) {
+        out.push(intersect(prev, cur, a, b));
+      }
+      prev = cur;
+      prevIn = curIn;
+    }
+  }
+  if (out.length > 1) {
+    const a0 = out[0];
+    const b0 = out[out.length - 1];
+    if (Math.hypot(a0.x - b0.x, a0.y - b0.y) < 1e-4) {
+      out.pop();
+    }
+  }
+  return out;
+}
+
+function clipPathFromVerts(ctx, verts) {
+  ctx.beginPath();
+  verts.forEach((v, i) => {
+    if (i === 0) {
+      ctx.moveTo(v.x, v.y);
+    } else {
+      ctx.lineTo(v.x, v.y);
+    }
+  });
+  ctx.closePath();
+  ctx.clip();
+}
+
+function placeFloatingPill(dot, cy, W, H, lw, lh, margin, rDot, gap) {
+  const cands = [
+    { l: dot.x - lw / 2, t: dot.y - rDot - gap - lh },
+    { l: dot.x - lw / 2, t: dot.y + rDot + gap },
+    { l: dot.x + rDot + gap, t: dot.y - lh / 2 },
+    { l: dot.x - rDot - gap - lw, t: dot.y - lh / 2 }
+  ];
+  const inB = (l, t) => l >= margin && t >= margin && l + lw <= W - margin && t + lh <= H - margin;
+  let order = [0, 1, 2, 3];
+  if (dot.y < cy - 25) {
+    order = [1, 0, 2, 3];
+  } else if (dot.y > cy + 25) {
+    order = [0, 1, 2, 3];
+  }
+  for (const i of order) {
+    const c = cands[i];
+    if (inB(c.l, c.t)) {
+      return { l: c.l, t: c.t };
+    }
+  }
+  return {
+    l: Math.max(margin, Math.min(dot.x - lw / 2, W - margin - lw)),
+    t: Math.max(margin, Math.min(dot.y - lh / 2, H - margin - lh))
+  };
+}
+
+function scoresToMapPoint(pol, eco, soc, cx, cy, verts) {
+  const vp = verts[AXIS_POS_IDX.pol];
+  const ve = verts[AXIS_POS_IDX.eco];
+  const vs = verts[AXIS_POS_IDX.soc];
+  return {
+    x: cx + (pol / 10) * (vp.x - cx) + (eco / 10) * (ve.x - cx) + (soc / 10) * (vs.x - cx),
+    y: cy + (pol / 10) * (vp.y - cy) + (eco / 10) * (ve.y - cy) + (soc / 10) * (vs.y - cy)
+  };
+}
+
+function convexHull2D(points) {
+  if (points.length <= 1) {
+    return points.slice();
+  }
+  const pts = points.slice().sort((a, b) => (a.x === b.x ? a.y - b.y : a.x - b.x));
+  const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const lower = [];
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) {
+      lower.pop();
+    }
+    lower.push(p);
+  }
+  const upper = [];
+  for (let i = pts.length - 1; i >= 0; i -= 1) {
+    const p = pts[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) {
+      upper.pop();
+    }
+    upper.push(p);
+  }
+  upper.pop();
+  lower.pop();
+  return lower.concat(upper);
+}
+
+function archetypeRegionPolygon(a, cx, cy, verts, gridSteps) {
+  const n = Math.max(3, gridSteps | 0 || 5);
+  const pts = [];
+  const polR = a.pol;
+  const ecoR = a.eco;
+  const socR = a.soc;
+  const add = (pol, eco, soc) => {
+    const raw = scoresToMapPoint(pol, eco, soc, cx, cy, verts);
+    pts.push(clampPointToConvexHex(raw.x, raw.y, cx, cy, verts));
+  };
+  for (let i = 0; i <= n; i += 1) {
+    const pol = polR[0] + (polR[1] - polR[0]) * (i / n);
+    for (let j = 0; j <= n; j += 1) {
+      const eco = ecoR[0] + (ecoR[1] - ecoR[0]) * (j / n);
+      for (let k = 0; k <= n; k += 1) {
+        const soc = socR[0] + (socR[1] - socR[0]) * (k / n);
+        add(pol, eco, soc);
+      }
+    }
+  }
+  const hull = convexHull2D(pts);
+  return hull.length >= 3 ? hull : [];
+}
+
+function setupExplorerSelect(matchedArch) {
+  const wrap = document.getElementById("explorer-wrap");
+  const sel = document.getElementById("explorer-select");
+  if (!wrap || !sel) {
+    return;
+  }
+  wrap.style.display = "block";
+  const matchedIdx = matchedArch ? ARCHETYPES.findIndex((a) => a.name === matchedArch.name) : -1;
+  let html = '<option value="">Map only (no region overlay)</option>';
+  ARCHETYPES.forEach((a, i) => {
+    const hint = matchedIdx === i ? " (your match)" : "";
+    html += `<option value="${i}">${a.name}${hint}</option>`;
+  });
+  sel.innerHTML = html;
+  if (matchedIdx >= 0) {
+    sel.value = String(matchedIdx);
+  } else {
+    sel.value = "";
+  }
+  exploreArchIndex = matchedIdx >= 0 ? matchedIdx : null;
+}
+
+function onExploreArch(val) {
+  exploreArchIndex = val === "" || val === null || val === undefined ? null : parseInt(val, 10);
+  if (lastDraw) {
+    drawStar(lastDraw.sc, lastDraw.arch);
+  }
 }
 
 function roundedRect(ctx, x, y, width, height, radius) {
@@ -393,8 +632,8 @@ function roundedRect(ctx, x, y, width, height, radius) {
 function drawStar(scores, arch) {
   const canvas = document.getElementById("star");
   const ctx = canvas.getContext("2d");
-  const W = 560;
-  const H = 540;
+  const W = 660;
+  const H = 640;
   canvas.width = W;
   canvas.height = H;
 
@@ -403,37 +642,64 @@ function drawStar(scores, arch) {
 
   const cx = W / 2;
   const cy = H / 2 + 10;
-  const R = 160;
+  const R = 220;
+  const Rinner = R * 0.3;
   const vAngles = [-150, -90, -30, 30, 90, 150];
   const poles = [
-    { label: "Liberty", sub: "Political freedom", axis: "pol", sign: 1 },
-    { label: "Meritocracy", sub: "Economic freedom", axis: "eco", sign: 1 },
-    { label: "Hierarchy", sub: "Social order", axis: "soc", sign: 1 },
-    { label: "Authority", sub: "Political control", axis: "pol", sign: -1 },
-    { label: "Equality", sub: "Economic control", axis: "eco", sign: -1 },
-    { label: "Anarchy", sub: "Social freedom", axis: "soc", sign: -1 }
+    { label: "Anarchy", sub: "Social freedom", color: "#888888", axis: "soc", sign: -1 },
+    { label: "Liberty", sub: "Political freedom", color: "#8888ee", axis: "pol", sign: 1 },
+    { label: "Meritocracy", sub: "Economic freedom", color: "#ddbb00", axis: "eco", sign: 1 },
+    { label: "Hierarchy", sub: "Social order", color: "#9955dd", axis: "soc", sign: 1 },
+    { label: "Authority", sub: "Political control", color: "#cc4444", axis: "pol", sign: -1 },
+    { label: "Equality", sub: "Economic control", color: "#dd4444", axis: "eco", sign: -1 }
   ];
-
-  const sectionColors = ["#aaaaff", "#4466ee", "#8833cc", "#222222", "#cc3333", "#888888"];
-  const verts = vAngles.map((angle) => ({
-    x: cx + R * Math.cos((angle * Math.PI) / 180),
-    y: cy + R * Math.sin((angle * Math.PI) / 180)
-  }));
+  const trapFills = [
+    dark ? "rgba(136,136,136,0.82)" : "rgba(136,136,136,0.72)",
+    dark ? "rgba(255,213,79,0.82)" : "rgba(255,213,79,0.68)",
+    dark ? "rgba(33,150,243,0.82)" : "rgba(33,150,243,0.65)",
+    dark ? "rgba(18,18,18,0.92)" : "rgba(26,26,26,0.88)",
+    dark ? "rgba(229,57,53,0.82)" : "rgba(229,57,53,0.68)",
+    dark ? "rgba(67,160,71,0.82)" : "rgba(67,160,71,0.68)"
+  ];
+  const verts = hexVerts(cx, cy, R, vAngles);
+  const vertsInner = hexVerts(cx, cy, Rinner, vAngles);
+  const dotOuterR = 14 + 2.5 + 2;
+  const vertsSafe = hexVerts(cx, cy, R - dotOuterR, vAngles);
 
   for (let i = 0; i < 6; i += 1) {
-    const v1 = verts[i];
-    const v2 = verts[(i + 1) % 6];
+    const v1o = verts[i];
+    const v2o = verts[(i + 1) % 6];
+    const v1i = vertsInner[i];
+    const v2i = vertsInner[(i + 1) % 6];
     ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(v1.x, v1.y);
-    ctx.lineTo(v2.x, v2.y);
+    ctx.moveTo(v1i.x, v1i.y);
+    ctx.lineTo(v1o.x, v1o.y);
+    ctx.lineTo(v2o.x, v2o.y);
+    ctx.lineTo(v2i.x, v2i.y);
     ctx.closePath();
-    ctx.fillStyle = sectionColors[i] + (dark ? "bb" : "cc");
+    ctx.fillStyle = trapFills[i];
     ctx.fill();
-    ctx.strokeStyle = dark ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.6)";
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = dark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.5)";
+    ctx.lineWidth = 1;
     ctx.stroke();
   }
+
+  ctx.beginPath();
+  vertsInner.forEach((v, i) => {
+    if (i === 0) {
+      ctx.moveTo(v.x, v.y);
+    } else {
+      ctx.lineTo(v.x, v.y);
+    }
+  });
+  ctx.closePath();
+  ctx.fillStyle = dark ? "rgba(129,212,250,0.42)" : "rgba(179,229,252,0.92)";
+  ctx.fill();
+  ctx.strokeStyle = dark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.28)";
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
 
   ctx.beginPath();
   verts.forEach((v, i) => {
@@ -459,63 +725,132 @@ function drawStar(scores, arch) {
     ctx.stroke();
   }
 
-  poles.forEach((pole, i) => {
-    const angle = (vAngles[i] * Math.PI) / 180;
-    const lx = cx + (R + 28) * Math.cos(angle);
-    const ly = cy + (R + 28) * Math.sin(angle);
-    ctx.font = "600 12px Inter, Segoe UI, sans-serif";
+  if (exploreArchIndex !== null && !Number.isNaN(exploreArchIndex) && ARCHETYPES[exploreArchIndex]) {
+    const ex = ARCHETYPES[exploreArchIndex];
+    const hull = archetypeRegionPolygon(ex, cx, cy, verts, 5);
+    const clipped = clipPolygonToConvexHex(hull, verts);
+    if (clipped.length >= 3) {
+      ctx.save();
+      clipPathFromVerts(ctx, verts);
+      ctx.beginPath();
+      clipped.forEach((p, i) => {
+        if (i === 0) {
+          ctx.moveTo(p.x, p.y);
+        } else {
+          ctx.lineTo(p.x, p.y);
+        }
+      });
+      ctx.closePath();
+      ctx.fillStyle = ex.color + (dark ? "44" : "55");
+      ctx.fill();
+      ctx.strokeStyle = ex.color + (dark ? "88" : "77");
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.font = "500 11px Inter, Segoe UI, sans-serif";
+      const cxh = clipped.reduce((s, p) => s + p.x, 0) / clipped.length;
+      const cyh = clipped.reduce((s, p) => s + p.y, 0) / clipped.length;
+      const lbl = ex.name;
+      const tw = ctx.measureText(lbl).width;
+      const pad = 5;
+      const bh = 15;
+      const lw = tw + pad * 2;
+      const pos = placeFloatingPill({ x: cxh, y: cyh }, cy, W, H, lw, bh, 6, 0, 6);
+      ctx.shadowColor = dark ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.2)";
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetY = 1;
+      ctx.fillStyle = dark ? "rgba(25,25,30,0.92)" : "rgba(255,255,255,0.95)";
+      roundedRect(ctx, pos.l, pos.t, lw, bh, 4);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.fillStyle = ex.color;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(lbl, pos.l + lw / 2, pos.t + bh / 2);
+      ctx.restore();
+    }
+  }
+
+  const fontMain = "500 12px Inter, Segoe UI, sans-serif";
+  const fontSub = "400 10px Inter, Segoe UI, sans-serif";
+  poles.forEach((p, i) => {
+    const a = (vAngles[i] * Math.PI) / 180;
+    const lx = cx + (R + 28) * Math.cos(a);
+    const ly = cy + (R + 28) * Math.sin(a);
+    ctx.font = fontMain;
     ctx.fillStyle = dark ? "rgba(230,230,230,0.95)" : "rgba(20,20,20,0.9)";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(pole.label, lx, ly);
-    ctx.font = "400 10px Inter, Segoe UI, sans-serif";
+    ctx.fillText(p.label, lx, ly);
+    ctx.font = fontSub;
     ctx.fillStyle = dark ? "rgba(170,170,170,0.8)" : "rgba(80,80,80,0.8)";
-    ctx.fillText(pole.sub, lx, ly + 14);
+    ctx.fillText(p.sub, lx, ly + 14);
   });
 
-  let dotX = cx;
-  let dotY = cy;
-  poles.forEach((pole, i) => {
-    const rawVal = scores[pole.axis] * pole.sign;
-    const weight = Math.max(0, rawVal) / 10;
-    dotX += weight * (verts[i].x - cx) * 0.9;
-    dotY += weight * (verts[i].y - cy) * 0.9;
-  });
+  ctx.save();
+  clipPathFromVerts(ctx, verts);
+  ctx.font = fontSub;
+  ctx.fillStyle = dark ? "rgba(200,200,200,0.55)" : "rgba(100,100,100,0.5)";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("Centre", cx, cy);
+  ctx.font = "400 9px Inter, Segoe UI, sans-serif";
+  ctx.fillStyle = dark ? "rgba(180,180,190,0.45)" : "rgba(90,90,100,0.45)";
+  ctx.fillText("More neutral scores", cx, cy + 12);
+  ctx.restore();
 
+  const raw = scoresToMapPoint(scores.pol, scores.eco, scores.soc, cx, cy, verts);
+  const dot = clampPointToConvexHex(raw.x, raw.y, cx, cy, vertsSafe);
+
+  ctx.save();
+  clipPathFromVerts(ctx, verts);
   ctx.beginPath();
-  ctx.arc(dotX, dotY, 14, 0, Math.PI * 2);
+  ctx.arc(dot.x, dot.y, 14, 0, Math.PI * 2);
   ctx.fillStyle = `${arch.color}55`;
   ctx.fill();
-
   ctx.beginPath();
-  ctx.arc(dotX, dotY, 9, 0, Math.PI * 2);
-  ctx.fillStyle = "#ffffff";
+  ctx.arc(dot.x, dot.y, 9, 0, Math.PI * 2);
+  ctx.fillStyle = dark ? "#1a1a22" : "#ffffff";
   ctx.fill();
   ctx.strokeStyle = arch.color;
   ctx.lineWidth = 2.5;
   ctx.stroke();
+  ctx.restore();
 
+  ctx.save();
+  ctx.font = "500 11px Inter, Segoe UI, sans-serif";
   const labelText = `You: ${arch.name}`;
-  ctx.font = "600 11px Inter, Segoe UI, sans-serif";
-  const textWidth = ctx.measureText(labelText).width;
-  ctx.fillStyle = dark ? "rgba(30,30,30,0.75)" : "rgba(255,255,255,0.8)";
-  roundedRect(ctx, dotX - textWidth / 2 - 6, dotY - 28, textWidth + 12, 16, 4);
+  const tw = ctx.measureText(labelText).width;
+  const lh = 18;
+  const lw = tw + 12;
+  const pos = placeFloatingPill(dot, cy, W, H, lw, lh, 8, 14, 6);
+  ctx.shadowColor = dark ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.2)";
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 1;
+  ctx.fillStyle = dark ? "rgba(30,30,36,0.92)" : "rgba(255,255,255,0.96)";
+  roundedRect(ctx, pos.l, pos.t, lw, lh, 4);
   ctx.fill();
-  ctx.fillStyle = dark ? "rgba(240,240,240,0.95)" : "rgba(10,10,10,0.9)";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "bottom";
-  ctx.fillText(labelText, dotX, dotY - 14);
-
-  ctx.font = "400 10px Inter, Segoe UI, sans-serif";
-  ctx.fillStyle = dark ? "rgba(200,200,200,0.5)" : "rgba(100,100,100,0.45)";
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.fillStyle = dark ? "rgba(240,240,240,0.98)" : "rgba(10,10,10,0.92)";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("Centre", cx, cy);
+  ctx.fillText(labelText, pos.l + lw / 2, pos.t + lh / 2);
+  ctx.restore();
 }
 
 function restart() {
   answers = new Array(Qs.length).fill(null);
   cur = 0;
+  lastDraw = null;
+  exploreArchIndex = null;
+  const ew = document.getElementById("explorer-wrap");
+  if (ew) {
+    ew.style.display = "none";
+  }
   show("s-intro");
 }
 
@@ -524,6 +859,16 @@ function bindEvents() {
   document.getElementById("btn-back").addEventListener("click", prevQ);
   document.getElementById("btn-next").addEventListener("click", nextQ);
   document.getElementById("btn-restart").addEventListener("click", restart);
+
+  const explorerSelect = document.getElementById("explorer-select");
+  if (explorerSelect) {
+    explorerSelect.addEventListener("change", (e) => {
+      const target = e.target;
+      if (target instanceof HTMLSelectElement) {
+        onExploreArch(target.value);
+      }
+    });
+  }
 
   document.getElementById("q-wrap").addEventListener("click", (event) => {
     const target = event.target;

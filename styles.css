@@ -308,8 +308,42 @@ button.large {
 #star {
   display: block;
   margin: 0 auto;
-  max-width: 100%;
+  max-width: min(100%, 720px);
   height: auto;
+}
+
+.explorer-wrap {
+  display: none;
+  margin: 1rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 0.5px solid var(--color-border-tertiary);
+}
+
+.explorer-wrap label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.4rem;
+}
+
+.explorer-wrap select {
+  width: 100%;
+  max-width: 100%;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  border-radius: var(--border-radius-md);
+  border: 0.5px solid var(--color-border-secondary);
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.explorer-hint {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+  margin-top: 0.35rem;
+  line-height: 1.45;
 }
 
 .restart-btn {

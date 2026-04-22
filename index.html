@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Hexagonal Political Compass</title>
   <meta name="description" content="A 21-question hexagonal political compass quiz.">
-  <link rel="stylesheet" href="./styles.css?v=3">
+  <link rel="stylesheet" href="./styles.css?v=4">
 </head>
 <body>
   <main id="app">
@@ -76,11 +76,18 @@
         </div>
       </div>
 
-      <canvas id="star" width="560" height="540"></canvas>
+      <canvas id="star" width="660" height="640"></canvas>
+      <div class="explorer-wrap" id="explorer-wrap">
+        <label for="explorer-select">Explore archetype regions on the hex map</label>
+        <select id="explorer-select"></select>
+        <p class="explorer-hint" id="explorer-hint">
+          The three positive poles sit 120° apart, so balanced scores land near the centre and the three axes fill the hex evenly. Each archetype's shaded region is its score box, projected and clamped to the hex the same way as your dot.
+        </p>
+      </div>
       <button id="btn-restart" class="restart-btn">Retake quiz</button>
     </section>
   </main>
 
-  <script src="./app.js?v=3"></script>
+  <script src="./app.js?v=4"></script>
 </body>
 </html>
