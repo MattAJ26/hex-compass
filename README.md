@@ -13,11 +13,13 @@ A static quiz that scores you on **three** dimensions of power—**political** (
 
 ## Behaviour (high level)
 
-- **21 questions** (seven per axis), mapped to scores roughly in **−10…10** per dimension.
-- The **hex map** projects those three scores into the plane; the **positive** poles (liberty, meritocracy, hierarchy) are spaced **120°** apart so the layout matches the model.
+- **Standard quiz**: **21** questions (seven per axis).
+- **Extended quiz**: **42** questions—the same 21 plus **seven more per axis**, written as broad principled claims (in the spirit of Arnold Kling's *Three Languages of Politics*: coercion/freedom, oppressed/oppressor, civilization/barbarism, mapped onto the three axes). Extended mode also activates **extra archetype profiles** in addition to the original set.
+- Answers are aggregated per axis then normalised roughly to **−10…10** per dimension regardless of quiz length (more items change stability, not the scale endpoints).
+- The **hex map** projects those three scores into the plane; **positive** poles (liberty, meritocracy, hierarchy) sit **120°** apart so the geometry matches the model.
 - **Matching** uses axis-aligned **ranges** for each archetype; if no box contains your point, the nearest archetype wins.
-- **Display** uses a mild visual stretch on scores so regions read more evenly on the hex; numeric results and matching still use the raw scores.
-- **Centrist** results are clamped to the **inner** hex on the map; other archetypes use the outer hex. The dropdown can shade each archetype’s region for exploration.
+- **Display** uses a mild visual stretch so regions read evenly on the hex; numeric results and matching use **raw** scores.
+- **Centrist** is clamped to the **inner** hex on the map; other archetypes use the outer hex. The explorer dropdown lists whichever archetypes are active for the quiz you took.
 
 ## Run locally
 

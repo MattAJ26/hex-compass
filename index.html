@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Hexagonal Political Compass</title>
-  <meta name="description" content="A 21-question quiz on political, economic, and social dimensions of power—mapped on a hexagonal compass instead of a single left-right line.">
+  <meta name="description" content="Standard or extended quiz on political, economic, and social dimensions of power—mapped on a hexagonal compass rather than a single left-right spectrum.">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -56,6 +56,15 @@
           treats those as three separable questions, each with its own pole pair.
         </p>
         <p>
+          Arnold Kling's <em>Three Languages of Politics</em> describes how different camps often
+          argue past one another: libertarians frame disputes as <strong>coercion versus freedom</strong>,
+          progressives as <strong>oppressed versus oppressor</strong>, and conservatives as
+          <strong>civilization versus barbarism</strong>. This compass does not map those labels
+          one-to-one, but the three axes echo that insight: political power (liberty vs authority),
+          economic power (meritocracy vs equality), and social power (hierarchy vs anarchy). The
+          extended quiz adds a second round of similarly broad questions on each axis.
+        </p>
+        <p>
           The <strong>hexagon</strong> is a layout choice, not a fourth ideology: your three scores
           are combined so that moving toward liberty, meritocracy, or hierarchy pulls you toward
           different corners, while mixed answers land toward the centre. No model captures every
@@ -65,11 +74,15 @@
       </div>
 
       <p class="sub intro-note">
-        21 questions. Results include a detailed profile of your political archetype, your dominant
-        values, and how your three axes interact.
+        Choose standard (21 questions) or extended (42 questions). Extended deepens each axis with
+        further philosophical items (same tone as the first set) and activates additional archetype
+        profiles for matching. Either way your scores map to the same compass.
       </p>
 
-      <button id="btn-start" class="primary large">Begin quiz</button>
+      <div class="start-actions">
+        <button type="button" id="btn-start-standard" class="primary large">Standard quiz · 21 questions</button>
+        <button type="button" id="btn-start-extended" class="secondary large">Extended quiz · 42 questions</button>
+      </div>
     </section>
 
     <section id="s-quiz" class="screen">
@@ -107,7 +120,7 @@
         <label for="explorer-select">Explore archetype regions on the hex map</label>
         <select id="explorer-select"></select>
         <p class="explorer-hint" id="explorer-hint">
-          The three positive poles sit 120° apart, so balanced scores land near the centre and the three axes fill the hex evenly. Each archetype's shaded region is its score box, projected and clamped to the hex the same way as your dot.
+          The three positive poles sit 120° apart, so balanced scores land near the centre and the three axes fill the hex evenly. Each archetype's shaded region is its score box, projected and clamped to the hex the same way as your dot. The extended quiz adds profiles to this list—your explorer always matches the mode you chose.
         </p>
       </div>
       <button id="btn-restart" class="restart-btn">Retake quiz</button>

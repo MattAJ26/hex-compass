@@ -246,6 +246,28 @@ button.large {
   font-size: 0.9rem;
 }
 
+button.secondary {
+  background: var(--color-background-secondary);
+}
+
+button.secondary:hover {
+  filter: brightness(1.06);
+}
+
+.start-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+
+.quiz-mode-line {
+  font-size: 0.74rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.4rem;
+  letter-spacing: 0.02em;
+}
+
 .muted {
   font-size: 0.78rem;
   color: var(--color-text-secondary);

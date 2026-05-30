@@ -1,4 +1,4 @@
-const Qs = [
+const QS_STANDARD = [
   { axis: "pol", dir: 1, color: "#6666cc", text: "The government derives its legitimacy entirely from the ongoing consent of the governed - any law the people reject en masse loses its moral force." },
   { axis: "pol", dir: -1, color: "#6666cc", text: "A strong central authority is necessary to maintain order; the state's right to govern should not depend on constant popular approval." },
   { axis: "pol", dir: 1, color: "#6666cc", text: "Individuals have an inalienable right to resist, protest, and disobey laws they consider unjust without requiring collective permission." },
@@ -22,7 +22,42 @@ const Qs = [
   { axis: "soc", dir: 1, color: "#7744bb", text: "Children benefit most when raised within clear authority structures - family, community, and tradition - rather than being given radical freedom to self-define." }
 ];
 
-const ARCHETYPES = [
+/** Additional items for extended mode (21 more: 7 per axis). Broad, principled claims in the spirit of Arnold Kling's three languages of politics (coercion vs freedom, oppressed vs oppressor, civilization vs barbarism), mapped onto political, economic, and social centralization. */
+const QS_EXTRA = [
+  { axis: "pol", dir: 1, color: "#6666cc", text: "The gravest political wrong is forcing people to act against their own judgment through threats of punishment." },
+  { axis: "pol", dir: -1, color: "#6666cc", text: "A government that cannot command obedience when citizens disagree will eventually fail to protect anyone." },
+  { axis: "pol", dir: 1, color: "#6666cc", text: "Political authority is legitimate only insofar as those governed could in principle withdraw their allegiance without unreasonable cost." },
+  { axis: "pol", dir: -1, color: "#6666cc", text: "Maintaining civic peace sometimes requires restricting conduct that would tear apart the fabric of shared life." },
+  { axis: "pol", dir: 1, color: "#6666cc", text: "Associations formed by consent should govern their members; political compulsion should begin where consent ends." },
+  { axis: "pol", dir: -1, color: "#6666cc", text: "Large-scale cooperation requires officials whose decisions bind dissenters, not merely persuade them." },
+  { axis: "pol", dir: 1, color: "#6666cc", text: "Liberty means living under rules one has had a fair chance to reject or reform, not merely rules one happens to tolerate." },
+
+  { axis: "eco", dir: 1, color: "#aa8800", text: "Economic justice consists chiefly in people receiving the fruits of their labour, risk, and voluntary exchange with others." },
+  { axis: "eco", dir: -1, color: "#aa8800", text: "Material deprivation in the midst of plenty indicts the community, not merely the individuals who suffer it." },
+  { axis: "eco", dir: 1, color: "#aa8800", text: "Severe limits on reward for effort drain the willingness to innovate and to carry responsibilities others avoid." },
+  { axis: "eco", dir: -1, color: "#aa8800", text: "Unequal starting conditions reproduce unfair outcomes even when later exchanges are formally free." },
+  { axis: "eco", dir: 1, color: "#aa8800", text: "Voluntary exchange among strangers, at honest prices, is among the most impartial instruments society possesses." },
+  { axis: "eco", dir: -1, color: "#aa8800", text: "When bargaining power is unequal, formally free contracts can mask relationships of dependence and exploitation." },
+  { axis: "eco", dir: 1, color: "#aa8800", text: "Secure ownership of what one produces is a precondition of planning, investment, and long-term responsibility." },
+
+  { axis: "soc", dir: 1, color: "#7744bb", text: "Civilized life requires forms of deference, ceremony, and settled rank that tame impulse and orient ambition." },
+  { axis: "soc", dir: -1, color: "#7744bb", text: "Claims that some groups are naturally fitted to rule others should be treated as moral suspicions, not social truths." },
+  { axis: "soc", dir: 1, color: "#7744bb", text: "Transmitting a received way of life to the next generation is a duty comparable to furnishing material security." },
+  { axis: "soc", dir: -1, color: "#7744bb", text: "Traditions that no longer serve human dignity should yield to criticism even when they still command loyalty." },
+  { axis: "soc", dir: 1, color: "#7744bb", text: "Recognised chains of mentorship and authority in crafts, families, and institutions make complex societies possible." },
+  { axis: "soc", dir: -1, color: "#7744bb", text: "Genuine equality of standing matters more than preserving arrangements whose main virtue is familiarity." },
+  { axis: "soc", dir: 1, color: "#7744bb", text: "Shared standards of conduct - what respectable people do and forbid - protect communities from decay as much as laws do." }
+];
+
+const QS_EXTENDED = [...QS_STANDARD, ...QS_EXTRA];
+
+const QS_LENGTH_STANDARD = QS_STANDARD.length;
+const QS_LENGTH_EXTENDED = QS_EXTENDED.length;
+
+let quizMode = "standard";
+let activeQs = QS_STANDARD;
+
+const ARCHETYPES_STANDARD = [
   {
     name: "Pure Libertarian",
     pol: [7, 10], eco: [4, 8], soc: [-7, -1],
@@ -205,11 +240,162 @@ const ARCHETYPES = [
   }
 ];
 
+/** Supplementary archetypes (extended quiz only): modern currents, schematic score boxes. */
+const ARCHETYPES_EXTRA = [
+  {
+    name: "Democratic Socialist",
+    pol: [1, 5],
+    eco: [-10, -6],
+    soc: [-7, 1],
+    color: "#c94d85",
+    tagline: "\"Deepen democracy; transform ownership.\"",
+    body: "You favour broad electoral and workplace participation alongside substantial redistribution and decommodified services. Markets may persist in parts of the economy, but strategic sectors—from finance to essentials—should be socialised or tightly regulated so that investment serves shared priorities rather than speculative returns.",
+    traits: ["Economic democracy", "Public services", "Cooperative sectors", "Redistribution", "Reform socialism"],
+    comparisons: "Overlaps thinkers and parties labelled <strong>democratic socialist</strong> or <strong>radical-social-democratic</strong> in different countries; distinctions from pure social democracy turn on ambition for structural ownership shifts and institutional depth."
+  },
+  {
+    name: "Green Politics",
+    pol: [3, 8],
+    eco: [-9, -4],
+    soc: [-8, 2],
+    color: "#2ea86e",
+    tagline: "\"Ecological limits are political facts.\"",
+    body: "You treat environmental stability as a precondition for fairness: policy should price externalities, plan infrastructure transitions, and protect future interests even when polls favour short-run consumption discounts. Participation and rights matter, but not as cover for indefinite carbon-intensive business as usual.",
+    traits: ["Sustainability", "Precaution", "International coordination", "Regulation", "Eco-social bargains"],
+    comparisons: "Parallels formations often called <strong>green-left</strong> or <strong>realo</strong>/<strong>Fundi</strong> debates inside ecological parties; disagreement persists over growth, technology, and the role of markets versus planning."
+  },
+  {
+    name: "Left-Libertarian",
+    pol: [5, 9],
+    eco: [-8, -2],
+    soc: [-8, 0],
+    color: "#6e8abf",
+    tagline: "\"Against domination—in state and firm alike.\"",
+    body: "You reject concentrated political authority and class-based economic power together. Workplace governance, commons, or strong union control feature as democratic checks on hierarchies liberals often leave untouched. Laws should secure exit and voice rather than celebrate either pure markets or nationalist discipline.",
+    traits: ["Anti-capitalism", "Civil libertarianism", "Economic decentralisation", "Collective bargaining", "Non-domination"],
+    comparisons: "Resonances with strands of <strong>libertarian socialism</strong>, some <strong>municipalist</strong> writing, and academic <strong>left-liberal</strong> theory; exact economic models vary sharply between adherents."
+  },
+  {
+    name: "Market Socialist",
+    pol: [0, 4],
+    eco: [-9, -3],
+    soc: [-5, 3],
+    color: "#8f6bc9",
+    tagline: "\"Prices yes; absentee owners no.\"",
+    body: "You separate competitive pricing from capitalist ownership structures: cooperative, public, or worker-governed enterprises should trade in markets while surplus and risk are democratically governed. Macro coordination can resemble social democracy except that firm-level governance is intentionally non-corporate.",
+    traits: ["Worker cooperatives", "Market allocation", "Public investment banks", "Economic pluralism", "Labour veto rights"],
+    comparisons: "Draws from <strong>Oskar Lange–style debates</strong>, contemporary Nordic co-operative law, and <strong>Yugoslav self-management</strong> memory; proponents dispute how much autonomy individual firms should retain."
+  },
+  {
+    name: "Civic Nationalist",
+    pol: [-1, 4],
+    eco: [1, 6],
+    soc: [-1, 5],
+    color: "#4a90c2",
+    tagline: "\"The nation as institutions citizens share.\"",
+    body: "You attach legitimacy to territorial states defined by citizenship, language rights, and shared procedures rather than fixed ethnic hierarchies. Economic openness is tempered by cohesion policies—education, pensions, defence—whose benefits accrue visibly to insiders without celebrating exclusion.",
+    traits: ["Constitutional patriotism", "Universal citizenship", "Solidarity constrained", "Rule of law", "Moderate protection"],
+    comparisons: "Labels differ by country (e.g. <strong>civic republican</strong>, <strong>liberal nationalist</strong>); contrast with authoritarian nationalism rests on hostility to discretionary power and ethnically ranked law."
+  },
+  {
+    name: "National Conservative",
+    pol: [-6, -1],
+    eco: [-2, 5],
+    soc: [5, 10],
+    color: "#8b4514",
+    tagline: "\"Order borders markets by culture-first priorities.\"",
+    body: "You accept electoral politics yet prioritise sovereignty, culturally bounded solidarity, and social stability over cosmopolitan legal defaults. Immigration, trade, and technology policy should thicken communal identity even when efficiency models recommend the opposite sequencing.",
+    traits: ["Culture-first", "Sovereignty", "Traditional institutions", "Sceptical globalism", "Majoritarian symbolism"],
+    comparisons: "Maps loosely onto <strong>national-conservative</strong> caucuses inside democracies since the 2010s; overlaps with authoritarian nationalism when scepticism toward courts and minorities hardens unchecked."
+  },
+  {
+    name: "Post-Liberal",
+    pol: [-4, 2],
+    eco: [-4, 4],
+    soc: [5, 9],
+    color: "#5c4033",
+    tagline: "\"Common ends before neutral procedures.\"",
+    body: "You argue that thin liberal neutrality undervalues substantive goods—family form, virtue, communal worship—and licences economic forces that corrode cohesion. Institutions should embody moral priorities openly; dissent is tolerable within bounds set by communal discernment rather than perpetual rights escalation.",
+    traits: ["Thick conception of goods", "Common-good framing", "Selective dirigisme", "Tradition-positive law", "Scepticism of neutrality"],
+    comparisons: "Associated with varied <strong>post-liberal</strong> journals and Catholic-influenced political theory in several Western countries; self-descriptions overlap with populist conservatives but emphasize philosophy over rhetorical anti-elitism."
+  },
+  {
+    name: "Ordoliberal",
+    pol: [1, 5],
+    eco: [4, 7],
+    soc: [-2, 4],
+    color: "#3d7ea6",
+    tagline: "\"Competition requires a strong rule-maker.\"",
+    body: "You treat predictable rules, cartel policing, independent central banking, and social insurance anchors as prerequisites for workable markets—not regrettable compromises. Fiscal culture should prize macro balance even when electorates crave spending surprises.",
+    traits: ["Anti-cartel rules", "Monetary credibility", "Bismarckian insurance", "Constitutional economics", "Export discipline"],
+    comparisons: "<strong>Walter Eucken</strong>, <strong>Freiburg School</strong>, and post-war German economic law are reference points; modern usage sometimes blurs ordoliberalism with generic austerity debates."
+  },
+  {
+    name: "Developmental Statist",
+    pol: [-8, -3],
+    eco: [3, 8],
+    soc: [4, 9],
+    color: "#2d6a92",
+    tagline: "\"Govern for industrial capacity before consumption.\"",
+    body: "You accept authoritarian or semi-authoritarian political centralisation where it clears bottlenecks: infrastructure, vocational pipelines, sovereign wealth funds, upstream technology. Equity claims focus on uplift trajectories rather than maximising contemporaneous dissent channels.",
+    traits: ["Industrial policy", "SOEs", "Long horizons", "Authoritarian moderniser", "Security-economics fusion"],
+    comparisons: "Resembles narratives around several <strong>East Asian developmental states</strong>; democratic variants exist where legislatures constrain leaders without dissolving dirigiste instincts."
+  },
+  {
+    name: "Pirate Politics / Digital Libertarian Left",
+    pol: [5, 9],
+    eco: [-2, 4],
+    soc: [-6, 2],
+    color: "#9c6b9a",
+    tagline: "\"Code, cryptography, and civil rights scale together.\"",
+    body: "You prioritise speech, encryption, commons-based digital infrastructure, and limits on behavioural surveillance—even when prosecutors invoke security maximalism or copyright rentiers invoke property absolutism. Offline economic views range from moderate redistribution to gift economies online.",
+    traits: ["Privacy", "Open licences", "Network neutrality", "Direct democracy tooling", "Anti-surveillance"],
+    comparisons: "Echoes demands of organisations sometimes dubbed <strong>Pirate Parties</strong> plus fragments of FOSS-aligned activism; coherence varies because economic left-right splits persist inside the coalition."
+  },
+  {
+    name: "Distributist",
+    pol: [2, 6],
+    eco: [-5, 2],
+    soc: [4, 9],
+    color: "#788c5e",
+    tagline: "\"Many owners, rooted places.\"",
+    body: "You favour widely distributed productive property—family farms, cooperatives, artisanal firms—rather than oligopolistic platforms or homogeneous wage labour. Supporting policy mixes subsidiarity rhetoric with scepticism of unlimited scale in both state and corporation.",
+    traits: ["Subsidiarity", "Anti-trust zeal", "Localism", "Property diffusion", "Moral economy"],
+    comparisons: "<strong>G. K. Chesterton</strong>, <strong>Hilaire Belloc</strong>, and modern Catholic Social Teaching readers often claim the label despite diverging on tariffs and unions."
+  },
+  {
+    name: "Syncretic / Non-Aligned Populism",
+    pol: [-3, 4],
+    eco: [-4, 4],
+    soc: [2, 7],
+    color: "#9a8470",
+    tagline: "\"Left-right binaries miss the betrayal.\"",
+    body: "You combine suspicion of cosmopolitan elites with selective admiration for dirigiste gestures—state capital, ceremonial tradition, charismatic leadership—without fully endorsing ideological purity tests. Platforms may juxtapose redistribution rhetoric with nationalist motifs in ways commentators label opportunistic or innovative.",
+    traits: ["Elite-scepticism", "Policy hybridity", "Paternalist economics", "Symbolic nationalism", "Programmatic elasticity"],
+    comparisons: "<strong>Grey-zone parties</strong> in global South contests and some European protest movements resemble this centroid; scholarly debate asks whether coherence or patronage-machine logic better explains electoral success."
+  }
+];
+
+/** Active archetype list switches with quiz mode (`setQuizMode`). */
+let activeArchetypes = ARCHETYPES_STANDARD;
+
+function buildArchetypesForMode(mode) {
+  return mode === "extended" ? ARCHETYPES_STANDARD.concat(ARCHETYPES_EXTRA) : ARCHETYPES_STANDARD.slice();
+}
+
+function setQuizMode(mode) {
+  quizMode = mode === "extended" ? "extended" : "standard";
+  activeQs = quizMode === "extended" ? QS_EXTENDED : QS_STANDARD;
+  activeArchetypes = buildArchetypesForMode(quizMode);
+}
+
 const axisNames = { pol: "Political", eco: "Economic", soc: "Social" };
 const likertLabels = ["Strongly agree", "Agree", "Neutral", "Disagree", "Strongly disagree"];
 const likertScores = [2, 1, 0, -1, -2];
 
-let answers = new Array(Qs.length).fill(null);
+setQuizMode("standard");
+
+let answers = new Array(QS_LENGTH_STANDARD).fill(null);
 let cur = 0;
 let lastDraw = null;
 let exploreArchIndex = null;
@@ -222,24 +408,27 @@ function show(id) {
   }
 }
 
-function startQuiz() {
+function startQuiz(mode) {
+  setQuizMode(mode);
+  answers = new Array(activeQs.length).fill(null);
+  cur = 0;
   show("s-quiz");
   renderQ(0);
 }
 
 function renderQ(i) {
   cur = i;
-  const q = Qs[i];
+  const q = activeQs[i];
   const progress = document.getElementById("q-prog");
   const pct = document.getElementById("q-pct");
   const back = document.getElementById("btn-back");
   const next = document.getElementById("btn-next");
   const wrap = document.getElementById("q-wrap");
 
-  progress.textContent = `Question ${i + 1} of ${Qs.length}`;
-  pct.textContent = `${Math.round((i / Qs.length) * 100)}% done`;
+  progress.textContent = `Question ${i + 1} of ${activeQs.length}`;
+  pct.textContent = `${Math.round((i / activeQs.length) * 100)}% done`;
   back.style.display = i > 0 ? "" : "none";
-  next.textContent = i === Qs.length - 1 ? "See my result" : "Next";
+  next.textContent = i === activeQs.length - 1 ? "See my result" : "Next";
 
   let html = `<div class="q-card"><div class="q-axis" style="color:${q.color}">${axisNames[q.axis]} axis</div><div class="q-text">${q.text}</div><div class="likert">`;
   likertLabels.forEach((lbl, k) => {
@@ -278,7 +467,7 @@ function nextQ() {
     return;
   }
 
-  if (cur === Qs.length - 1) {
+  if (cur === activeQs.length - 1) {
     showResult();
     return;
   }
@@ -296,7 +485,7 @@ function calcScores() {
   const sums = { pol: 0, eco: 0, soc: 0 };
   const counts = { pol: 0, eco: 0, soc: 0 };
 
-  Qs.forEach((q, i) => {
+  activeQs.forEach((q, i) => {
     if (answers[i] !== null) {
       sums[q.axis] += answers[i] * q.dir;
       counts[q.axis] += 1;
@@ -317,7 +506,7 @@ function matchArch(p, e, s) {
 
   let best = null;
   let bestScore = -Infinity;
-  for (const a of ARCHETYPES) {
+  for (const a of activeArchetypes) {
     if (inRange(p, a.pol) && inRange(e, a.eco) && inRange(s, a.soc)) {
       const total = score(p, a.pol) + score(e, a.eco) + score(s, a.soc);
       if (total > bestScore) {
@@ -330,7 +519,7 @@ function matchArch(p, e, s) {
   if (!best) {
     const clamp = (v, r) => Math.max(r[0], Math.min(r[1], v));
     let minDist = Infinity;
-    for (const a of ARCHETYPES) {
+    for (const a of activeArchetypes) {
       const d = Math.hypot(p - clamp(p, a.pol), e - clamp(e, a.eco), s - clamp(s, a.soc));
       if (d < minDist) {
         minDist = d;
@@ -356,6 +545,7 @@ function showResult() {
 
   document.getElementById("archetype-display").innerHTML = `
     <div class="archetype-card" style="background:${bg};border-left-color:${border}">
+      <p class="quiz-mode-line">${quizMode === "extended" ? `Extended quiz · ${QS_LENGTH_EXTENDED} questions` : `Standard quiz · ${QS_LENGTH_STANDARD} questions`}</p>
       <h3 style="color:${arch.color}">${arch.name}</h3>
       <div class="tagline" style="color:${arch.color}">${arch.tagline}</div>
       <div class="body">${arch.body}</div>
@@ -604,9 +794,9 @@ function setupExplorerSelect(matchedArch) {
     return;
   }
   wrap.style.display = "block";
-  const matchedIdx = matchedArch ? ARCHETYPES.findIndex((a) => a.name === matchedArch.name) : -1;
+  const matchedIdx = matchedArch ? activeArchetypes.findIndex((a) => a.name === matchedArch.name) : -1;
   let html = '<option value="">Map only (no region overlay)</option>';
-  ARCHETYPES.forEach((a, i) => {
+  activeArchetypes.forEach((a, i) => {
     const hint = matchedIdx === i ? " (your match)" : "";
     html += `<option value="${i}">${a.name}${hint}</option>`;
   });
@@ -737,8 +927,8 @@ function drawStar(scores, arch) {
     ctx.stroke();
   }
 
-  if (exploreArchIndex !== null && !Number.isNaN(exploreArchIndex) && ARCHETYPES[exploreArchIndex]) {
-    const ex = ARCHETYPES[exploreArchIndex];
+  if (exploreArchIndex !== null && !Number.isNaN(exploreArchIndex) && activeArchetypes[exploreArchIndex]) {
+    const ex = activeArchetypes[exploreArchIndex];
     const hull = archetypeRegionPolygon(ex, cx, cy, verts, 6);
     let clipped = clipPolygonToConvexHex(hull, verts);
     if (ex.name === "Centrist") {
@@ -864,7 +1054,7 @@ function drawStar(scores, arch) {
 }
 
 function restart() {
-  answers = new Array(Qs.length).fill(null);
+  answers = new Array(activeQs.length).fill(null);
   cur = 0;
   lastDraw = null;
   exploreArchIndex = null;
@@ -876,7 +1066,8 @@ function restart() {
 }
 
 function bindEvents() {
-  document.getElementById("btn-start").addEventListener("click", startQuiz);
+  document.getElementById("btn-start-standard").addEventListener("click", () => startQuiz("standard"));
+  document.getElementById("btn-start-extended").addEventListener("click", () => startQuiz("extended"));
   document.getElementById("btn-back").addEventListener("click", prevQ);
   document.getElementById("btn-next").addEventListener("click", nextQ);
   document.getElementById("btn-restart").addEventListener("click", restart);
