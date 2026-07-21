@@ -376,17 +376,171 @@ const ARCHETYPES_EXTRA = [
   }
 ];
 
-/** Active archetype list switches with quiz mode (`setQuizMode`). */
-let activeArchetypes = ARCHETYPES_STANDARD;
+const AXIS_BAND_THRESHOLD = 2;
 
-function buildArchetypesForMode(mode) {
-  return mode === "extended" ? ARCHETYPES_STANDARD.concat(ARCHETYPES_EXTRA) : ARCHETYPES_STANDARD.slice();
+const POL_BANDS = [
+  { label: "Authority", short: "Auth", range: [-10, -AXIS_BAND_THRESHOLD], poleColor: "#cc4444", centralPhrase: "centralized authority" },
+  { label: "Centrist", short: "Cent", range: [-AXIS_BAND_THRESHOLD, AXIS_BAND_THRESHOLD], poleColor: "#b79fba", centralPhrase: "a pragmatic balance of governance styles" },
+  { label: "Liberty", short: "Lib", range: [AXIS_BAND_THRESHOLD, 10], poleColor: "#8888ee", centralPhrase: "decentralised decision-making" }
+];
+
+const ECO_BANDS = [
+  { label: "Equality", short: "Eq", range: [-10, -AXIS_BAND_THRESHOLD], poleColor: "#dd4444", centralPhrase: "redistribution to reduce material inequality" },
+  { label: "Centrist", short: "Cent", range: [-AXIS_BAND_THRESHOLD, AXIS_BAND_THRESHOLD], poleColor: "#d1ad5c", centralPhrase: "a balance between markets and redistribution" },
+  { label: "Meritocracy", short: "Merit", range: [AXIS_BAND_THRESHOLD, 10], poleColor: "#ddbb00", centralPhrase: "rewarding merit and effort" }
+];
+
+const SOC_BANDS = [
+  { label: "Anarchy", short: "Anar", range: [-10, -AXIS_BAND_THRESHOLD], poleColor: "#888888", centralPhrase: "minimal coercive social hierarchy" },
+  { label: "Centrist", short: "Cent", range: [-AXIS_BAND_THRESHOLD, AXIS_BAND_THRESHOLD], poleColor: "#a7a7d9", centralPhrase: "a balance between roles and egalitarian cooperation" },
+  { label: "Hierarchy", short: "Hier", range: [AXIS_BAND_THRESHOLD, 10], poleColor: "#b388ff", centralPhrase: "stable roles and recognised authority" }
+];
+
+function hexToRgb(hex) {
+  const clean = hex.replace("#", "").trim();
+  const full = clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean;
+  const n = parseInt(full, 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
 }
+
+function rgbToHex(r, g, b) {
+  const to = (v) => v.toString(16).padStart(2, "0");
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
+
+function blendColors(...hexColors) {
+  const rgbs = hexColors.map(hexToRgb);
+  const n = rgbs.length || 1;
+  const r = Math.round(rgbs.reduce((s, c) => s + c.r, 0) / n);
+  const g = Math.round(rgbs.reduce((s, c) => s + c.g, 0) / n);
+  const b = Math.round(rgbs.reduce((s, c) => s + c.b, 0) / n);
+  return rgbToHex(r, g, b);
+}
+
+function clamp(v, lo, hi) {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+function inRange(v, r) {
+  return v >= r[0] && v <= r[1];
+}
+
+function seedScore(v, r) {
+  const mid = (r[0] + r[1]) / 2;
+  return 10 - Math.abs(v - mid);
+}
+
+const SEED_ARCHETYPES = ARCHETYPES_STANDARD.concat(ARCHETYPES_EXTRA);
+
+function pickBestSeedForCenters(pol, eco, soc) {
+  let best = null;
+  let bestTotal = -Infinity;
+
+  for (const a of SEED_ARCHETYPES) {
+    if (!a) continue;
+    if (inRange(pol, a.pol) && inRange(eco, a.eco) && inRange(soc, a.soc)) {
+      const total = seedScore(pol, a.pol) + seedScore(eco, a.eco) + seedScore(soc, a.soc);
+      if (total > bestTotal) {
+        bestTotal = total;
+        best = a;
+      }
+    }
+  }
+
+  if (best) return best;
+
+  let minDist = Infinity;
+  for (const a of SEED_ARCHETYPES) {
+    const cp = clamp(pol, a.pol[0], a.pol[1]);
+    const ce = clamp(eco, a.eco[0], a.eco[1]);
+    const cs = clamp(soc, a.soc[0], a.soc[1]);
+    const d = Math.hypot(pol - cp, eco - ce, soc - cs);
+    if (d < minDist) {
+      minDist = d;
+      best = a;
+    }
+  }
+  return best || null;
+}
+
+function makeGeneratedBucketArchetype(polBand, ecoBand, socBand) {
+  const coreCentrist = polBand.label === "Centrist" && ecoBand.label === "Centrist" && socBand.label === "Centrist";
+  const shortName = `${polBand.short}/${ecoBand.short}/${socBand.short}`;
+  const name = `${polBand.label} · ${ecoBand.label} · ${socBand.label}`;
+  return {
+    name,
+    shortName,
+    coreCentrist,
+    pol: polBand.range,
+    eco: ecoBand.range,
+    soc: socBand.range,
+    color: blendColors(polBand.poleColor, ecoBand.poleColor, socBand.poleColor),
+    tagline: `On the map: ${polBand.centralPhrase}, ${ecoBand.centralPhrase}, and ${socBand.centralPhrase}.`,
+    body:
+      `Your answers place you with an emphasis on three kinds of power: ` +
+      `political centralisation vs decentralisation (${polBand.label}), ` +
+      `economic reward vs redistribution (${ecoBand.label}), and ` +
+      `social hierarchy vs egalitarian order (${socBand.label}). ` +
+      `Each axis pulls your point toward its corresponding pole; your final region is determined by which band each score falls into.`,
+    traits: [polBand.centralPhrase, ecoBand.centralPhrase, socBand.centralPhrase, "Trade-offs between axes are the point"],
+    comparisons:
+      "This pattern can be understood as a three-dimensional blend of recurring political debates: " +
+      "how coercion is justified (political), how material outcomes are distributed (economic), and how social standing is organised (social).",
+  };
+}
+
+function buildBucketArchetypes27() {
+  const out = [];
+  const usedSeedNames = new Set();
+  const bandCenter = (range) => (range[0] + range[1]) / 2;
+
+  for (let pi = 0; pi < 3; pi += 1) {
+    for (let ei = 0; ei < 3; ei += 1) {
+      for (let si = 0; si < 3; si += 1) {
+        const polBand = POL_BANDS[pi];
+        const ecoBand = ECO_BANDS[ei];
+        const socBand = SOC_BANDS[si];
+
+        const generated = makeGeneratedBucketArchetype(polBand, ecoBand, socBand);
+        const polCenter = bandCenter(polBand.range);
+        const ecoCenter = bandCenter(ecoBand.range);
+        const socCenter = bandCenter(socBand.range);
+        const seed = pickBestSeedForCenters(polCenter, ecoCenter, socCenter);
+
+        let chosen = generated;
+        if (seed) {
+          const seedName = seed.name || generated.name;
+          chosen = {
+            ...generated,
+            name: seedName,
+            tagline: seed.tagline || generated.tagline,
+            body: seed.body || generated.body,
+            traits: seed.traits || generated.traits,
+            comparisons: seed.comparisons || generated.comparisons,
+          };
+
+          // Prevent the same seed label appearing for multiple buckets.
+          if (usedSeedNames.has(seedName)) {
+            chosen.name = `${seedName} (${generated.shortName})`;
+          }
+          usedSeedNames.add(chosen.name);
+        }
+
+        out.push(chosen);
+      }
+    }
+  }
+
+  return out;
+}
+
+// Deterministic archetypes: exactly one bucket for each (pol, eco, soc) band.
+const ARCHETYPES_BUCKET_27 = buildBucketArchetypes27();
+let activeArchetypes = ARCHETYPES_BUCKET_27;
 
 function setQuizMode(mode) {
   quizMode = mode === "extended" ? "extended" : "standard";
   activeQs = quizMode === "extended" ? QS_EXTENDED : QS_STANDARD;
-  activeArchetypes = buildArchetypesForMode(quizMode);
 }
 
 const axisNames = { pol: "Political", eco: "Economic", soc: "Social" };
@@ -501,34 +655,12 @@ function calcScores() {
 }
 
 function matchArch(p, e, s) {
-  const inRange = (v, r) => v >= r[0] && v <= r[1];
-  const score = (v, r) => 10 - Math.abs(v - (r[0] + r[1]) / 2);
-
-  let best = null;
-  let bestScore = -Infinity;
-  for (const a of activeArchetypes) {
-    if (inRange(p, a.pol) && inRange(e, a.eco) && inRange(s, a.soc)) {
-      const total = score(p, a.pol) + score(e, a.eco) + score(s, a.soc);
-      if (total > bestScore) {
-        bestScore = total;
-        best = a;
-      }
-    }
-  }
-
-  if (!best) {
-    const clamp = (v, r) => Math.max(r[0], Math.min(r[1], v));
-    let minDist = Infinity;
-    for (const a of activeArchetypes) {
-      const d = Math.hypot(p - clamp(p, a.pol), e - clamp(e, a.eco), s - clamp(s, a.soc));
-      if (d < minDist) {
-        minDist = d;
-        best = a;
-      }
-    }
-  }
-
-  return best;
+  const band = (v) => (v <= -AXIS_BAND_THRESHOLD ? 0 : v >= AXIS_BAND_THRESHOLD ? 2 : 1);
+  const pi = band(p); // 0=Authority, 1=Centrist, 2=Liberty
+  const ei = band(e); // 0=Equality, 1=Centrist, 2=Meritocracy
+  const si = band(s); // 0=Anarchy, 1=Centrist, 2=Hierarchy
+  const idx = pi * 9 + ei * 3 + si;
+  return activeArchetypes[idx] || activeArchetypes[0];
 }
 
 function showResult() {
@@ -547,6 +679,7 @@ function showResult() {
     <div class="archetype-card" style="background:${bg};border-left-color:${border}">
       <p class="quiz-mode-line">${quizMode === "extended" ? `Extended quiz · ${QS_LENGTH_EXTENDED} questions` : `Standard quiz · ${QS_LENGTH_STANDARD} questions`}</p>
       <h3 style="color:${arch.color}">${arch.name}</h3>
+      <p class="quiz-mode-line" style="margin-top:-0.25rem">Position: ${arch.shortName}</p>
       <div class="tagline" style="color:${arch.color}">${arch.tagline}</div>
       <div class="body">${arch.body}</div>
       <div class="traits">${traitsHtml}</div>
@@ -931,7 +1064,7 @@ function drawStar(scores, arch) {
     const ex = activeArchetypes[exploreArchIndex];
     const hull = archetypeRegionPolygon(ex, cx, cy, verts, 6);
     let clipped = clipPolygonToConvexHex(hull, verts);
-    if (ex.name === "Centrist") {
+    if (ex.coreCentrist) {
       clipped = clipPolygonToConvexHex(clipped, vertsInner);
     }
     if (clipped.length >= 3) {
@@ -957,7 +1090,7 @@ function drawStar(scores, arch) {
       ctx.font = "500 11px Inter, Segoe UI, sans-serif";
       const cxh = clipped.reduce((s, p) => s + p.x, 0) / clipped.length;
       const cyh = clipped.reduce((s, p) => s + p.y, 0) / clipped.length;
-      const lbl = ex.name;
+      const lbl = ex.shortName || ex.name;
       const tw = ctx.measureText(lbl).width;
       const pad = 5;
       const bh = 15;
@@ -1013,7 +1146,7 @@ function drawStar(scores, arch) {
     verts
   );
   const vertsInnerSafe = hexVerts(cx, cy, Rinner - dotOuterR, vAngles);
-  const clampVerts = arch.name === "Centrist" ? vertsInnerSafe : vertsSafe;
+  const clampVerts = arch.coreCentrist ? vertsInnerSafe : vertsSafe;
   const dot = clampPointToConvexHex(raw.x, raw.y, cx, cy, clampVerts);
 
   ctx.save();
@@ -1033,7 +1166,7 @@ function drawStar(scores, arch) {
 
   ctx.save();
   ctx.font = "500 11px Inter, Segoe UI, sans-serif";
-  const labelText = `You: ${arch.name}`;
+  const labelText = `You: ${arch.shortName || arch.name}`;
   const tw = ctx.measureText(labelText).width;
   const lh = 18;
   const lw = tw + 12;
